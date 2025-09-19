@@ -9,16 +9,17 @@ Personal DeFi command center focused on Base-native incentives, ve-token governa
 
 ## Getting Started
 1. Install dependencies: `npm install`
-2. Run services in parallel (recommended in separate terminals):
+2. Copy `.env.example` to `.env` and provide strong secrets for Postgres and API keys as needed.
+3. Run services in parallel (recommended in separate terminals):
    - `npm run dev:api`
    - `npm run dev:web`
-3. Visit `http://localhost:3000` for the web experience. The API listens on `http://localhost:4000` by default.
+4. Visit `http://localhost:3000` for the web experience. The API listens on `http://localhost:4000` by default.
 
 ## Tooling Highlights
 - TypeScript across the stack.
 - Tailwind CSS (v4) for rapid UI iteration.
 - ESLint + Prettier for consistent code style.
-- Docker Compose scaffolding (coming next) for Postgres-backed persistence.
+- Docker Compose scaffolding for Postgres-backed persistence.
 
 ## Next Steps
 - Implement API health checks and configuration scaffolding (env validation, logging strategy).
