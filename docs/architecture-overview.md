@@ -3,7 +3,7 @@
 ## System Context
 - **Client Interface**: Likely React/Next.js web app or modern CLI dashboard. Consumes backend APIs for data and triggers transactions via wallet connections.
 - **Backend Services**: Node.js or Python service layer orchestrating data ingestion, analytics, and alerting.
-- **Data Layer**: Persistent store (PostgreSQL or MongoDB) for historical time series, positions cache, and alert logs.
+- **Data Layer**: PostgreSQL (managed via Prisma ORM) for wallet metadata, protocol registry, historical time series, and alert logs.
 - **Job Orchestration**: Scheduler (e.g., Temporal, BullMQ) executing periodic sync jobs, digest generation, and notification dispatch.
 
 ```
@@ -48,7 +48,7 @@
 5. Client displays dashboards, allows manual refresh, and creates configuration changes (watchlist, thresholds).
 
 ## Technology Considerations
-- **Backend stack**: TypeScript (NestJS) or Python (FastAPI) for strong typing and rapid iteration.
+- **Backend stack**: TypeScript Fastify services with Prisma ORM for type-safe data access.
 - **Front-end**: React/Next.js for dynamic dashboards; Chakra UI or Tailwind for consistent design.
 - **State management**: React Query/SWR for client-side caching and background refresh.
 - **Infrastructure**: Containerized services (Docker) deployed via Fly.io, Render, or AWS Lightsail for simplicity.

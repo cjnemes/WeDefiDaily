@@ -1,0 +1,49 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Chain {
+  id                    Int       @id
+  name                  String
+  shortName             String?
+  nativeCurrencySymbol  String?
+  explorerUrl           String?
+  metadata              Json?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  wallets               Wallet[]
+  protocols             Protocol[]
+}
+
+model Wallet {
+  id        String   @id @default(uuid())
+  address   String   @db.VarChar(42)
+  chainId   Int
+  label     String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  chain     Chain    @relation(fields: [chainId], references: [id], onDelete: Cascade)
+
+  @@unique([address, chainId], map: "wallet_address_chain_unique")
+}
+
+model Protocol {
+  id        String   @id @default(uuid())
+  slug      String   @unique @db.VarChar(64)
+  name      String
+  chainId   Int
+  website   String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  chain     Chain    @relation(fields: [chainId], references: [id], onDelete: Cascade)
+}
