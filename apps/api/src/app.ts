@@ -6,6 +6,7 @@ import prismaPlugin from './plugins/prisma';
 import { walletRoutes } from './routes/wallets';
 import { portfolioRoutes } from './routes/portfolio';
 import { governanceRoutes } from './routes/governance';
+import { rewardsRoutes } from './routes/rewards';
 
 export interface BuildAppOptions {
   enableRequestLogging?: boolean;
@@ -35,6 +36,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   await app.register(walletRoutes, { prefix: '/v1/wallets' });
   await app.register(portfolioRoutes, { prefix: '/v1/portfolio' });
   await app.register(governanceRoutes, { prefix: '/v1/governance' });
+  await app.register(rewardsRoutes, { prefix: '/v1/rewards' });
 
   return app;
 }

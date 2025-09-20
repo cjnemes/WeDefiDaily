@@ -105,6 +105,32 @@ interface GovernanceResponse {
   };
 }
 
+interface RewardsResponse {
+  meta: {
+    generatedAt: string;
+    totalOpportunities: number;
+  };
+  data: {
+    opportunities: Array<{
+      id: string;
+      protocol: { id: string; name: string; slug: string };
+      wallet: { id: string; address: string; label: string | null; chainId: number };
+      token: { id: string; symbol: string; name: string; decimals: number };
+      amount: string;
+      usdValue: string | null;
+      apr: string | null;
+      gasEstimateUsd: string | null;
+      netValueUsd: string | null;
+      roiAfterGas: string | null;
+      claimDeadline: string | null;
+      source: string | null;
+      contextLabel: string | null;
+      contextAddress: string | null;
+      computedAt: string;
+    }>;
+  };
+}
+
 function formatCurrency(value: string | undefined, fallback = "—") {
   if (!value) return fallback;
   const numeric = Number(value);
@@ -203,8 +229,32 @@ async function fetchGovernance(): Promise<GovernanceResponse | null> {
   }
 }
 
+async function fetchRewards(): Promise<RewardsResponse | null> {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+
+  try {
+    const response = await fetch(`${apiUrl}/v1/rewards`, {
+      next: { revalidate: 120 },
+    });
+
+    if (!response.ok) {
+      console.error("Failed to fetch rewards", response.statusText);
+      return null;
+    }
+
+    return (await response.json()) as RewardsResponse;
+  } catch (error) {
+    console.error("Failed to fetch rewards", error);
+    return null;
+  }
+}
+
 export default async function Home() {
-  const [portfolio, governance] = await Promise.all([fetchPortfolio(), fetchGovernance()]);
+  const [portfolio, governance, rewards] = await Promise.all([
+    fetchPortfolio(),
+    fetchGovernance(),
+    fetchRewards(),
+  ]);
   const totalUsd = portfolio ? formatCurrency(portfolio.meta.totalUsd, "—") : "—";
   const wallets = portfolio?.data ?? [];
   const totalVotingPower = governance
@@ -220,6 +270,15 @@ export default async function Home() {
     (epoch) => new Date(epoch.startsAt).getTime() > Date.now()
   );
   const topBribes = (governance?.data.bribes ?? []).slice(0, 4);
+  const rewardOpportunities = rewards?.data.opportunities ?? [];
+  const topOpportunities = rewardOpportunities.slice(0, 4);
+  const totalRewardUsdValue = rewardOpportunities.reduce((acc, reward) => {
+    const usd = Number(reward.netValueUsd ?? reward.usdValue ?? '0');
+    return Number.isFinite(usd) ? acc + usd : acc;
+  }, 0);
+  const totalRewardUsdString = Number.isFinite(totalRewardUsdValue)
+    ? totalRewardUsdValue.toString()
+    : undefined;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -343,6 +402,77 @@ export default async function Home() {
               </div>
             )}
           </div>
+        </section>
+
+        <section className="grid gap-4 rounded-2xl border border-foreground/10 bg-foreground/5 p-6">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.24em] text-foreground/50">
+                Claimable Rewards
+              </p>
+              <p className="text-2xl font-semibold text-foreground">
+                {formatCurrency(totalRewardUsdString)}
+              </p>
+            </div>
+            <div className="space-y-1 text-sm text-foreground/70">
+              <p>
+                Prioritize opportunities where net value exceeds gas; values update each governance sync.
+              </p>
+              <p>
+                Run <code className="rounded bg-foreground/10 px-1 py-0.5">npm run sync:rewards</code> to refresh now.
+              </p>
+            </div>
+          </div>
+
+          {topOpportunities.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-foreground/15 bg-background/40 px-4 py-6 text-center text-sm text-foreground/60">
+              No pending rewards detected. Trigger the reward sync once emissions accrue.
+            </div>
+          ) : (
+            <div className="grid gap-3 md:grid-cols-2">
+              {topOpportunities.map((opportunity) => {
+                const netValue = formatCurrency(opportunity.netValueUsd ?? undefined, '—');
+                const gasValue = formatCurrency(opportunity.gasEstimateUsd ?? undefined, '—');
+                const deadline = opportunity.claimDeadline
+                  ? formatCountdown(new Date(opportunity.claimDeadline))
+                  : '—';
+
+                return (
+                  <div
+                    key={opportunity.id}
+                    className="flex flex-col gap-2 rounded-xl border border-foreground/10 bg-background/40 px-4 py-3 text-sm"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-foreground">{opportunity.protocol.name}</span>
+                      <span className="text-foreground/60 text-xs">
+                        {opportunity.contextLabel ?? opportunity.token.symbol}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-foreground/70">
+                      <span>Amount</span>
+                      <span>{formatQuantity(opportunity.amount)} {opportunity.token.symbol}</span>
+                    </div>
+                    <div className="flex justify-between text-foreground/70">
+                      <span>Net Value</span>
+                      <span>{netValue}</span>
+                    </div>
+                    <div className="flex justify-between text-foreground/70">
+                      <span>Gas</span>
+                      <span>{gasValue}</span>
+                    </div>
+                    <div className="flex justify-between text-foreground/70">
+                      <span>Deadline</span>
+                      <span>{deadline}</span>
+                    </div>
+                    <div className="flex justify-between text-foreground/70">
+                      <span>ROI After Gas</span>
+                      <span>{formatPercentage(opportunity.roiAfterGas)}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </section>
 
         <section className="grid gap-4 md:grid-cols-2">

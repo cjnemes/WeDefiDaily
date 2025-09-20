@@ -33,6 +33,7 @@
   - Additional: Community APIs (e.g., Aerodrome analytics endpoints) if rate limits acceptable.
   - Store epoch schedules and gauge metadata in configuration files for quick reference.
   - Locks endpoint (`/locks?address=0x...`) and bribe feed (`/bribes`) populate governance tables.
+  - Reward feed endpoints (`/rewards?address=0x...`) power the claim tracker (placeholder until official APIs exposed).
 
 - **Gammaswap**
   - Check for published subgraph or API; otherwise rely on contract calls via Alchemy.
@@ -44,6 +45,7 @@
   - Use BscScan (via Etherscan API compatibility) for token balances and lock metadata.
   - Consider direct contract interactions for vote snapshots and rewards.
   - Companion API (`/locks`, `/bribes`) hydrates governance lock and bribe tables alongside Aerodrome.
+  - Reward metrics rely on Thena emissions endpoints when available; gas estimates from BscScan.
 
 ## Off-Chain Storage & Processing
 - Choose a document database (e.g., MongoDB Atlas) or lightweight PostgreSQL instance for caching positions, price history, and alerts.
