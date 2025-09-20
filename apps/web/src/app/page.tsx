@@ -131,6 +131,38 @@ interface RewardsResponse {
   };
 }
 
+interface GammaswapResponse {
+  meta: {
+    count: number;
+    generatedAt: string;
+  };
+  data: {
+    positions: Array<{
+      id: string;
+      protocol: { id: string; name: string; slug: string };
+      wallet: { id: string; address: string; label: string | null; chainId: number };
+      pool: {
+        id: string;
+        address: string;
+        baseSymbol: string;
+        quoteSymbol: string;
+        utilization: string | null;
+        borrowRateApr: string | null;
+        supplyRateApr: string | null;
+      };
+      assetToken: { id: string; symbol: string; name: string };
+      positionType: string;
+      notional: string;
+      debtValue: string | null;
+      healthRatio: string | null;
+      liquidationPrice: string | null;
+      pnlUsd: string | null;
+      lastSyncAt: string;
+      riskLevel: 'critical' | 'warning' | 'healthy' | 'unknown';
+    }>;
+  };
+}
+
 function formatCurrency(value: string | undefined, fallback = "—") {
   if (!value) return fallback;
   const numeric = Number(value);
@@ -249,11 +281,32 @@ async function fetchRewards(): Promise<RewardsResponse | null> {
   }
 }
 
+async function fetchGammaswap(): Promise<GammaswapResponse | null> {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+
+  try {
+    const response = await fetch(`${apiUrl}/v1/gammaswap`, {
+      next: { revalidate: 120 },
+    });
+
+    if (!response.ok) {
+      console.error("Failed to fetch Gammaswap data", response.statusText);
+      return null;
+    }
+
+    return (await response.json()) as GammaswapResponse;
+  } catch (error) {
+    console.error("Failed to fetch Gammaswap data", error);
+    return null;
+  }
+}
+
 export default async function Home() {
-  const [portfolio, governance, rewards] = await Promise.all([
+  const [portfolio, governance, rewards, gammaswap] = await Promise.all([
     fetchPortfolio(),
     fetchGovernance(),
     fetchRewards(),
+    fetchGammaswap(),
   ]);
   const totalUsd = portfolio ? formatCurrency(portfolio.meta.totalUsd, "—") : "—";
   const wallets = portfolio?.data ?? [];
@@ -279,6 +332,8 @@ export default async function Home() {
   const totalRewardUsdString = Number.isFinite(totalRewardUsdValue)
     ? totalRewardUsdValue.toString()
     : undefined;
+  const gammaswapPositions = gammaswap?.data.positions ?? [];
+  const riskyGammaswapPositions = gammaswapPositions.filter((position) => position.riskLevel !== 'healthy');
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -539,6 +594,106 @@ export default async function Home() {
                 </article>
               );
             })
+          )}
+        </section>
+
+        <section className="grid gap-4 rounded-2xl border border-foreground/10 bg-foreground/5 p-6">
+          <div className="flex flex-col gap-1">
+            <p className="text-xs uppercase tracking-[0.24em] text-foreground/50">
+              Gammaswap Exposure
+            </p>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-3xl font-semibold text-foreground">{gammaswap?.meta.count ?? 0}</p>
+                <p className="text-sm text-foreground/60">Active positions across tracked wallets</p>
+              </div>
+              <div className="text-sm text-foreground/70">
+                <p>Sync latest pool metrics via <code className="rounded bg-foreground/10 px-1 py-0.5">npm run sync:gammaswap</code>.</p>
+              </div>
+            </div>
+          </div>
+
+          {gammaswapPositions.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-foreground/15 bg-background/40 px-4 py-6 text-center text-sm text-foreground/60">
+              No Gammaswap positions detected.
+            </div>
+          ) : (
+            <div className="grid gap-3 md:grid-cols-2">
+              {gammaswapPositions.slice(0, 4).map((position) => {
+                const notionalAmount = formatQuantity(position.notional);
+                const health = position.healthRatio
+                  ? `${Number(position.healthRatio).toFixed(2)}x`
+                  : '—';
+                const utilization = position.pool.utilization
+                  ? `${Number(position.pool.utilization).toFixed(2)}%`
+                  : '—';
+                const borrowApr = position.pool.borrowRateApr
+                  ? `${Number(position.pool.borrowRateApr).toFixed(2)}%`
+                  : '—';
+                const supplyApr = position.pool.supplyRateApr
+                  ? `${Number(position.pool.supplyRateApr).toFixed(2)}%`
+                  : '—';
+
+                const riskBadge = (() => {
+                  switch (position.riskLevel) {
+                    case 'critical':
+                      return 'text-red-500';
+                    case 'warning':
+                      return 'text-yellow-500';
+                    case 'healthy':
+                      return 'text-emerald-500';
+                    default:
+                      return 'text-foreground/60';
+                  }
+                })();
+
+                return (
+                  <div
+                    key={position.id}
+                    className="flex flex-col gap-2 rounded-xl border border-foreground/10 bg-background/40 px-4 py-3 text-sm"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-foreground">
+                        {position.pool.baseSymbol}/{position.pool.quoteSymbol}
+                      </span>
+                      <span className={`text-xs font-medium ${riskBadge}`}>{position.riskLevel.toUpperCase()}</span>
+                    </div>
+                    <div className="flex justify-between text-foreground/70">
+                      <span>Wallet</span>
+                      <span>{shortenAddress(position.wallet.address)}</span>
+                    </div>
+                    <div className="flex justify-between text-foreground/70">
+                      <span>Notional</span>
+                      <span>
+                        {notionalAmount} {position.assetToken.symbol}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-foreground/70">
+                      <span>Health</span>
+                      <span>{health}</span>
+                    </div>
+                    <div className="flex justify-between text-foreground/70">
+                      <span>Utilization</span>
+                      <span>{utilization}</span>
+                    </div>
+                    <div className="flex justify-between text-foreground/70">
+                      <span>Borrow APR</span>
+                      <span>{borrowApr}</span>
+                    </div>
+                    <div className="flex justify-between text-foreground/70">
+                      <span>Supply APR</span>
+                      <span>{supplyApr}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {riskyGammaswapPositions.length > 0 && (
+            <div className="rounded-xl border border-foreground/15 bg-red-500/10 px-4 py-3 text-sm text-red-500">
+              {riskyGammaswapPositions.length} position(s) approaching liquidation thresholds. Review borrow exposure.
+            </div>
           )}
         </section>
 

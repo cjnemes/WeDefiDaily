@@ -37,6 +37,7 @@ model Wallet {
   governanceLocks GovernanceLock[]
   rewardOpportunities RewardOpportunity[]
   rewardClaims        RewardClaim[]
+  gammaswapPositions  GammaswapPosition[]
 
   @@unique([address, chainId], map: "wallet_address_chain_unique")
 }
@@ -57,6 +58,8 @@ model Protocol {
   gauges         Gauge[]
   rewardOpportunities RewardOpportunity[]
   rewardClaims        RewardClaim[]
+  gammaswapPositions  GammaswapPosition[]
+  gammaswapPools      GammaswapPool[]
 }
 
 model Token {
@@ -77,6 +80,9 @@ model Token {
   bribeRewards     Bribe[]  @relation("BribeRewardToken")
   rewardOpportunities RewardOpportunity[]
   rewardClaims        RewardClaim[]
+  gammaswapPositions  GammaswapPosition[] @relation("GammaswapPositionAsset")
+  gammaswapPoolsAsBase  GammaswapPool[] @relation("GammaswapPoolBaseToken")
+  gammaswapPoolsAsQuote GammaswapPool[] @relation("GammaswapPoolQuoteToken")
 
   @@unique([chainId, address], map: "token_chain_address_unique")
 }
@@ -267,4 +273,54 @@ model RewardClaim {
 
   @@index([walletId, claimedAt])
   @@index([protocolId, claimedAt])
+}
+
+model GammaswapPool {
+  id             String   @id @default(uuid())
+  protocolId     String
+  poolAddress    String   @db.VarChar(64)
+  baseTokenId    String
+  quoteTokenId   String
+  baseSymbol     String   @db.VarChar(32)
+  quoteSymbol    String   @db.VarChar(32)
+  tvlUsd         Decimal? @db.Decimal(36, 18)
+  utilization    Decimal? @db.Decimal(36, 18)
+  borrowRateApr  Decimal? @db.Decimal(36, 18)
+  supplyRateApr  Decimal? @db.Decimal(36, 18)
+  metadata       Json?
+  updatedAt      DateTime @updatedAt
+  createdAt      DateTime @default(now())
+
+  protocol       Protocol @relation(fields: [protocolId], references: [id], onDelete: Cascade)
+  baseToken      Token    @relation("GammaswapPoolBaseToken", fields: [baseTokenId], references: [id], onDelete: Cascade)
+  quoteToken     Token    @relation("GammaswapPoolQuoteToken", fields: [quoteTokenId], references: [id], onDelete: Cascade)
+  positions      GammaswapPosition[]
+
+  @@unique([protocolId, poolAddress], map: "gammaswap_pool_unique")
+}
+
+model GammaswapPosition {
+  id              String   @id @default(uuid())
+  protocolId      String
+  poolId          String
+  walletId        String
+  assetTokenId    String
+  positionType    String   @db.VarChar(32)
+  notional        Decimal  @db.Decimal(36, 18)
+  debtValue       Decimal? @db.Decimal(36, 18)
+  healthRatio     Decimal? @db.Decimal(36, 18)
+  liquidationPrice Decimal? @db.Decimal(36, 18)
+  pnlUsd          Decimal? @db.Decimal(36, 18)
+  lastSyncAt      DateTime @default(now())
+  metadata        Json?
+
+  protocol        Protocol @relation(fields: [protocolId], references: [id], onDelete: Cascade)
+  pool            GammaswapPool @relation(fields: [poolId], references: [id], onDelete: Cascade)
+  wallet          Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  assetToken      Token    @relation("GammaswapPositionAsset", fields: [assetTokenId], references: [id], onDelete: Cascade)
+
+  @@index([walletId])
+  @@index([protocolId, lastSyncAt])
+  @@index([healthRatio])
+  @@unique([protocolId, poolId, walletId, positionType], map: "gammaswap_position_unique")
 }
