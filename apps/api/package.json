@@ -17,7 +17,8 @@
     "prisma:migrate:deploy": "dotenv -e ../../.env -- prisma migrate deploy",
     "prisma:studio": "dotenv -e ../../.env -- prisma studio",
     "prisma:validate": "dotenv -e ../../.env.example -- prisma validate",
-    "sync:balances": "dotenv -e ../../.env -- tsx src/jobs/sync-balances.ts"
+    "sync:balances": "dotenv -e ../../.env -- tsx src/jobs/sync-balances.ts",
+    "sync:governance": "dotenv -e ../../.env -- tsx src/jobs/sync-governance.ts"
   },
   "dependencies": {
     "@fastify/cors": "^10.0.1",

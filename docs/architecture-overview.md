@@ -28,6 +28,7 @@
 2. **Vote Analytics**
    - Integrates Aerodrome and veTHE data to rank bribes and recommend allocations.
    - Tracks governance calendars and provides ICS/notification hooks.
+   - Governance sync job (`npm run sync:governance`) ingests vote escrow positions and bribe markets.
 
 3. **Rewards Tracker**
    - Normalizes claimable rewards from multiple protocols.

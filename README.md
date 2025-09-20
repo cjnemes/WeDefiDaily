@@ -16,10 +16,11 @@ Personal DeFi command center focused on Base-native incentives, ve-token governa
 4. Push the Prisma schema to your database: `npm run db:push`
 5. Generate the Prisma client (if needed): `npm run db:generate`
 6. Seed balances (optional, requires API keys): `npm run sync:balances`
-7. Run services in parallel (recommended in separate terminals):
+7. Sync governance data (optional, requires governance API access): `npm run sync:governance`
+8. Run services in parallel (recommended in separate terminals):
    - `npm run dev:api`
    - `npm run dev:web`
-8. Visit `http://localhost:3000` for the web experience. The API listens on `http://localhost:4000` by default.
+9. Visit `http://localhost:3000` for the web experience. The API listens on `http://localhost:4000` by default.
 
 ## Tooling Highlights
 - TypeScript across the stack.
@@ -27,13 +28,14 @@ Personal DeFi command center focused on Base-native incentives, ve-token governa
 - ESLint + Prettier for consistent code style.
 - Prisma ORM for Postgres-backed persistence.
 - Docker Compose scaffolding for Postgres-backed persistence.
-- GitHub Actions CI pipeline running lint, type checks, and Prisma validation.
-- Alchemy + CoinGecko powered balance sync job (`npm run sync:balances`).
+- GitHub Actions CI pipeline running Prisma generate, lint, and type checks.
+- Alchemy + CoinMarketCap/CoinGecko powered balance sync job (`npm run sync:balances`).
+- Aerodrome/Thena governance sync job (`npm run sync:governance`).
 
 ## Next Steps
-- Add Base/Aerodrome data connectors and on-chain sync jobs.
-- Stand up CI (GitHub Actions) for linting, type-checking, and build validation.
-- Start integrating Base/Aerodrome data connectors per `docs/roadmap.md`.
+- Add alerting pipelines (claims due, epoch countdowns).
+- Integrate trade execution helpers and CLI digest exports.
+- Expand protocol coverage per `docs/roadmap.md`.
 
 ## API Surface (current)
 
@@ -54,6 +56,7 @@ Personal DeFi command center focused on Base-native incentives, ve-token governa
 
   Returns `201 Created` for new wallets or `200 OK` when an existing record is reused/updated.
 - `GET /v1/portfolio` – aggregates balances across tracked wallets (USD value, per-token breakdown).
+- `GET /v1/governance` – surfaces governance locks, bribe leaderboard, and upcoming epochs.
 
 ## Useful Commands
 
@@ -61,3 +64,4 @@ Personal DeFi command center focused on Base-native incentives, ve-token governa
 - `npm run typecheck` – run TypeScript type checking across web and API.
 - `npm run db:validate` – ensure the Prisma schema is valid (used by CI).
 - `npm run sync:balances` – fetch ERC-20 + native balances for configured wallets using Alchemy and update USD valuations via CoinGecko.
+- `npm run sync:governance` – ingest Aerodrome/Thena vote escrow data and bribe markets.

@@ -16,7 +16,8 @@
     "db:migrate:deploy": "npm run prisma:migrate:deploy --workspace @wedefidaily/api",
     "db:studio": "npm run prisma:studio --workspace @wedefidaily/api",
     "db:validate": "npm run prisma:validate --workspace @wedefidaily/api",
-    "sync:balances": "npm run sync:balances --workspace @wedefidaily/api"
+    "sync:balances": "npm run sync:balances --workspace @wedefidaily/api",
+    "sync:governance": "npm run sync:governance --workspace @wedefidaily/api"
   },
   "workspaces": [
     "apps/web",
