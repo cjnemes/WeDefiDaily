@@ -17,7 +17,9 @@
     "db:studio": "npm run prisma:studio --workspace @wedefidaily/api",
     "db:validate": "npm run prisma:validate --workspace @wedefidaily/api",
     "sync:balances": "npm run sync:balances --workspace @wedefidaily/api",
-    "sync:governance": "npm run sync:governance --workspace @wedefidaily/api"
+    "sync:governance": "npm run sync:governance --workspace @wedefidaily/api",
+    "sync:rewards": "npm run sync:rewards --workspace @wedefidaily/api",
+    "sync:gammaswap": "npm run sync:gammaswap --workspace @wedefidaily/api"
   },
   "workspaces": [
     "apps/web",

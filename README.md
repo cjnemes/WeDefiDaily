@@ -18,7 +18,8 @@ Personal DeFi command center focused on Base-native incentives, ve-token governa
 6. Seed balances (optional, requires API keys): `npm run sync:balances`
 7. Sync governance data (optional, requires governance API access): `npm run sync:governance`
 8. Sync reward opportunities (optional, requires protocol APIs): `npm run sync:rewards`
-9. Run services in parallel (recommended in separate terminals):
+9. Sync Gammaswap positions (optional): `npm run sync:gammaswap`
+10. Run services in parallel (recommended in separate terminals):
    - `npm run dev:api`
    - `npm run dev:web`
 10. Visit `http://localhost:3000` for the web experience. The API listens on `http://localhost:4000` by default.
@@ -33,6 +34,7 @@ Personal DeFi command center focused on Base-native incentives, ve-token governa
 - Alchemy + CoinMarketCap/CoinGecko powered balance sync job (`npm run sync:balances`).
 - Aerodrome/Thena governance sync job (`npm run sync:governance`).
 - Reward opportunity sync job across supported protocols (`npm run sync:rewards`).
+- Gammaswap position sync and risk analytics (`npm run sync:gammaswap`).
 
 ## Next Steps
 - Add alerting pipelines (claims due, epoch countdowns, gas advisories).
@@ -60,6 +62,7 @@ Personal DeFi command center focused on Base-native incentives, ve-token governa
 - `GET /v1/portfolio` – aggregates balances across tracked wallets (USD value, per-token breakdown).
 - `GET /v1/governance` – surfaces governance locks, bribe leaderboard, and upcoming epochs.
 - `GET /v1/rewards` – returns claimable rewards with gas-adjusted profitability metrics.
+- `GET /v1/gammaswap` – lists LP/borrow positions with health ratios and risk flags.
 
 ## Useful Commands
 
@@ -69,3 +72,4 @@ Personal DeFi command center focused on Base-native incentives, ve-token governa
 - `npm run sync:balances` – fetch ERC-20 + native balances for configured wallets using Alchemy and update USD valuations via CoinGecko.
 - `npm run sync:governance` – ingest Aerodrome/Thena vote escrow data and bribe markets.
 - `npm run sync:rewards` – populate reward opportunities and ROI metrics for supported protocols.
+- `npm run sync:gammaswap` – hydrate Gammaswap pool/position data and compute risk metrics.

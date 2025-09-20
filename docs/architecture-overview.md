@@ -42,6 +42,7 @@
 5. **Data Integration Layer**
    - Adapters for each API/provider encapsulating authentication, rate limiting, and normalization.
    - Shared caching layer (Redis) to store hot data and reduce redundant calls.
+   - Gammaswap module ingests pool/position metrics for risk analytics (`npm run sync:gammaswap`).
 
 ## Data Flow (High-Level)
 1. Scheduler triggers sync job.

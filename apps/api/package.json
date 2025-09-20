@@ -18,7 +18,9 @@
     "prisma:studio": "dotenv -e ../../.env -- prisma studio",
     "prisma:validate": "dotenv -e ../../.env.example -- prisma validate",
     "sync:balances": "dotenv -e ../../.env -- tsx src/jobs/sync-balances.ts",
-    "sync:governance": "dotenv -e ../../.env -- tsx src/jobs/sync-governance.ts"
+    "sync:governance": "dotenv -e ../../.env -- tsx src/jobs/sync-governance.ts",
+    "sync:rewards": "dotenv -e ../../.env -- tsx src/jobs/sync-rewards.ts",
+    "sync:gammaswap": "dotenv -e ../../.env -- tsx src/jobs/sync-gammaswap.ts"
   },
   "dependencies": {
     "@fastify/cors": "^10.0.1",

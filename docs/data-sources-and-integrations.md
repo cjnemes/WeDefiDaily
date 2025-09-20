@@ -36,9 +36,9 @@
   - Reward feed endpoints (`/rewards?address=0x...`) power the claim tracker (placeholder until official APIs exposed).
 
 - **Gammaswap**
-  - Check for published subgraph or API; otherwise rely on contract calls via Alchemy.
-  - Requires understanding of pool-specific data structures (liquidity, borrow rates, health factors).
-  - Build helper library to decode custom events and positions.
+  - Check for published API/subgraph; fallback to on-chain contract calls via Base RPC.
+  - Capture pool metrics (utilization, rates) and per-wallet positions with health ratios.
+  - `sync-gammaswap` job stores snapshots for dashboard risk analysis.
 
 - **veTHE (BSC)**
   - Identify official contract addresses (likely via Thena Finance or partner project).
