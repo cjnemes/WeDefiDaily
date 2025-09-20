@@ -17,10 +17,11 @@ Personal DeFi command center focused on Base-native incentives, ve-token governa
 5. Generate the Prisma client (if needed): `npm run db:generate`
 6. Seed balances (optional, requires API keys): `npm run sync:balances`
 7. Sync governance data (optional, requires governance API access): `npm run sync:governance`
-8. Run services in parallel (recommended in separate terminals):
+8. Sync reward opportunities (optional, requires protocol APIs): `npm run sync:rewards`
+9. Run services in parallel (recommended in separate terminals):
    - `npm run dev:api`
    - `npm run dev:web`
-9. Visit `http://localhost:3000` for the web experience. The API listens on `http://localhost:4000` by default.
+10. Visit `http://localhost:3000` for the web experience. The API listens on `http://localhost:4000` by default.
 
 ## Tooling Highlights
 - TypeScript across the stack.
@@ -31,9 +32,10 @@ Personal DeFi command center focused on Base-native incentives, ve-token governa
 - GitHub Actions CI pipeline running Prisma generate, lint, and type checks.
 - Alchemy + CoinMarketCap/CoinGecko powered balance sync job (`npm run sync:balances`).
 - Aerodrome/Thena governance sync job (`npm run sync:governance`).
+- Reward opportunity sync job across supported protocols (`npm run sync:rewards`).
 
 ## Next Steps
-- Add alerting pipelines (claims due, epoch countdowns).
+- Add alerting pipelines (claims due, epoch countdowns, gas advisories).
 - Integrate trade execution helpers and CLI digest exports.
 - Expand protocol coverage per `docs/roadmap.md`.
 
@@ -57,6 +59,7 @@ Personal DeFi command center focused on Base-native incentives, ve-token governa
   Returns `201 Created` for new wallets or `200 OK` when an existing record is reused/updated.
 - `GET /v1/portfolio` – aggregates balances across tracked wallets (USD value, per-token breakdown).
 - `GET /v1/governance` – surfaces governance locks, bribe leaderboard, and upcoming epochs.
+- `GET /v1/rewards` – returns claimable rewards with gas-adjusted profitability metrics.
 
 ## Useful Commands
 
@@ -65,3 +68,4 @@ Personal DeFi command center focused on Base-native incentives, ve-token governa
 - `npm run db:validate` – ensure the Prisma schema is valid (used by CI).
 - `npm run sync:balances` – fetch ERC-20 + native balances for configured wallets using Alchemy and update USD valuations via CoinGecko.
 - `npm run sync:governance` – ingest Aerodrome/Thena vote escrow data and bribe markets.
+- `npm run sync:rewards` – populate reward opportunities and ROI metrics for supported protocols.

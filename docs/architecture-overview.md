@@ -33,6 +33,7 @@
 3. **Rewards Tracker**
    - Normalizes claimable rewards from multiple protocols.
    - Calculates realized vs. unrealized yield and gas efficiency metrics.
+   - Reward sync job (`npm run sync:rewards`) aggregates pending claims with gas-adjusted profitability.
 
 4. **Alert Dispatcher**
    - Converts triggers into notifications via chosen channels.
