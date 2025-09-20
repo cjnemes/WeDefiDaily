@@ -23,11 +23,13 @@ const listWalletsQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).default(0),
 });
 
-const walletWithChain = Prisma.validator<Prisma.WalletDefaultArgs>()({
-  include: { chain: true },
-});
+const walletInclude = {
+  chain: true,
+} as const;
 
-type WalletWithRelations = Prisma.WalletGetPayload<typeof walletWithChain>;
+type WalletWithRelations = Prisma.WalletGetPayload<{
+  include: typeof walletInclude;
+}>;
 
 function normalizeAddress(address: string): string {
   return address.toLowerCase();
@@ -66,7 +68,7 @@ export const walletRoutes: FastifyPluginCallback = (app, _opts, done) => {
       skip: query.offset,
       take: query.limit,
       orderBy: { createdAt: 'desc' },
-      include: walletWithChain.include,
+      include: walletInclude,
     });
 
     return { data: wallets.map(serializeWallet) };
@@ -106,7 +108,7 @@ export const walletRoutes: FastifyPluginCallback = (app, _opts, done) => {
           chainId: payload.chainId,
         },
       },
-      include: walletWithChain.include,
+      include: walletInclude,
     });
 
     if (existing) {
@@ -119,7 +121,7 @@ export const walletRoutes: FastifyPluginCallback = (app, _opts, done) => {
             },
           },
           data: { label: payload.label },
-          include: walletWithChain.include,
+          include: walletInclude,
         });
         return reply.status(200).send({
           data: serializeWallet(updated),
@@ -140,7 +142,7 @@ export const walletRoutes: FastifyPluginCallback = (app, _opts, done) => {
           chainId: payload.chainId,
           label: payload.label,
         },
-        include: walletWithChain.include,
+        include: walletInclude,
       });
 
       return reply.status(201).send({
