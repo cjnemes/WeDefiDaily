@@ -65,6 +65,46 @@ interface PortfolioResponse {
   }>;
 }
 
+interface GovernanceResponse {
+  meta: {
+    generatedAt: string;
+  };
+  data: {
+    locks: Array<{
+      id: string;
+      protocol: { id: string; name: string; slug: string };
+      wallet: { id: string; address: string; label: string | null; chainId: number };
+      lockAmount: string;
+      votingPower: string;
+      boostMultiplier: string | null;
+      lockEndsAt: string | null;
+      lastRefreshedAt: string;
+      latestSnapshot: { capturedAt: string; votingPower: string } | null;
+    }>;
+    bribes: Array<{
+      id: string;
+      protocol: { id: string; name: string; slug: string };
+      gauge: { id: string; address: string; name: string | null };
+      epoch: { id: string; epochNumber: number | null; startsAt: string; endsAt: string };
+      rewardToken: { id: string; symbol: string; name: string; decimals: number };
+      rewardAmount: string;
+      rewardValueUsd: string | null;
+      totalVotes: string | null;
+      roiPercentage: string | null;
+      sponsorAddress: string | null;
+      source: string | null;
+    }>;
+    epochs: Array<{
+      id: string;
+      protocol: { id: string; name: string; slug: string };
+      epochNumber: number | null;
+      startsAt: string;
+      endsAt: string;
+      snapshotAt: string | null;
+    }>;
+  };
+}
+
 function formatCurrency(value: string | undefined, fallback = "—") {
   if (!value) return fallback;
   const numeric = Number(value);
@@ -76,6 +116,15 @@ function formatCurrency(value: string | undefined, fallback = "—") {
     currency: "USD",
     maximumFractionDigits: numeric >= 1000 ? 0 : 2,
   }).format(numeric);
+}
+
+function formatPercentage(value: string | null | undefined, fallback = "—") {
+  if (!value) return fallback;
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return fallback;
+  }
+  return `${numeric.toFixed(numeric >= 10 ? 1 : 2)}%`;
 }
 
 function formatQuantity(value: string) {
@@ -98,6 +147,22 @@ function shortenAddress(address: string) {
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
 }
 
+function formatCountdown(target: Date) {
+  const diffMs = target.getTime() - Date.now();
+  const diffHours = diffMs / (1000 * 60 * 60);
+  if (!Number.isFinite(diffHours)) {
+    return "—";
+  }
+  if (Math.abs(diffHours) < 1) {
+    return `${Math.round(diffHours * 60)} min`;
+  }
+  if (Math.abs(diffHours) < 48) {
+    return `${diffHours.toFixed(1)} h`;
+  }
+  const diffDays = diffHours / 24;
+  return `${diffDays.toFixed(1)} d`;
+}
+
 async function fetchPortfolio(): Promise<PortfolioResponse | null> {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
@@ -118,10 +183,43 @@ async function fetchPortfolio(): Promise<PortfolioResponse | null> {
   }
 }
 
+async function fetchGovernance(): Promise<GovernanceResponse | null> {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+
+  try {
+    const response = await fetch(`${apiUrl}/v1/governance`, {
+      next: { revalidate: 120 },
+    });
+
+    if (!response.ok) {
+      console.error("Failed to fetch governance", response.statusText);
+      return null;
+    }
+
+    return (await response.json()) as GovernanceResponse;
+  } catch (error) {
+    console.error("Failed to fetch governance", error);
+    return null;
+  }
+}
+
 export default async function Home() {
-  const portfolio = await fetchPortfolio();
+  const [portfolio, governance] = await Promise.all([fetchPortfolio(), fetchGovernance()]);
   const totalUsd = portfolio ? formatCurrency(portfolio.meta.totalUsd, "—") : "—";
   const wallets = portfolio?.data ?? [];
+  const totalVotingPower = governance
+    ? governance.data.locks.reduce((acc, lock) => acc + Number(lock.votingPower), 0)
+    : 0;
+  const formattedVotingPower = Number.isFinite(totalVotingPower)
+    ? new Intl.NumberFormat("en-US", {
+        maximumFractionDigits: totalVotingPower >= 1000 ? 0 : 2,
+      }).format(totalVotingPower)
+    : "—";
+
+  const nextEpoch = governance?.data.epochs.find(
+    (epoch) => new Date(epoch.startsAt).getTime() > Date.now()
+  );
+  const topBribes = (governance?.data.bribes ?? []).slice(0, 4);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -157,15 +255,96 @@ export default async function Home() {
           </div>
           <div className="space-y-1 text-sm text-foreground/70">
             <p>Balances update via Alchemy + CoinGecko every sync run.</p>
-            <p>
-              Kick off a refresh with <code className="rounded bg-foreground/10 px-1 py-0.5">npm run sync:balances</code> or
-              schedule it in cron.
+            <p className="flex flex-wrap gap-1">
+              <span>Refresh commands:</span>
+              <code className="rounded bg-foreground/10 px-1 py-0.5">npm run sync:balances</code>
+              <span>·</span>
+              <code className="rounded bg-foreground/10 px-1 py-0.5">npm run sync:governance</code>
             </p>
           </div>
         </div>
       </header>
 
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-12 px-6 pb-20">
+        <section className="grid gap-4 rounded-2xl border border-foreground/10 bg-foreground/5 p-6">
+          <div className="flex flex-col gap-1">
+            <p className="text-xs uppercase tracking-[0.24em] text-foreground/50">
+              Governance Snapshot
+            </p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-3xl font-semibold text-foreground">{formattedVotingPower}</p>
+                <p className="text-sm text-foreground/60">Total voting power across locks</p>
+              </div>
+              <div>
+                <p className="text-sm text-foreground/60">Next epoch</p>
+                {nextEpoch ? (
+                  <p className="text-lg font-semibold text-foreground">
+                    {nextEpoch.protocol.name} · {formatCountdown(new Date(nextEpoch.startsAt))}
+                  </p>
+                ) : (
+                  <p className="text-lg font-semibold text-foreground">No future epoch detected</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            {(governance?.data.locks ?? []).slice(0, 3).map((lock) => {
+              const label = lock.wallet.label ?? shortenAddress(lock.wallet.address);
+              return (
+                <div
+                  key={lock.id}
+                  className="flex flex-col gap-2 rounded-xl border border-foreground/10 bg-background/40 px-4 py-3 text-sm"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-foreground">{lock.protocol.name}</span>
+                    <span className="text-foreground/60">{label}</span>
+                  </div>
+                  <div className="flex justify-between text-foreground/70">
+                    <span>Voting Power</span>
+                    <span>{formatQuantity(lock.votingPower)}</span>
+                  </div>
+                  <div className="flex justify-between text-foreground/70">
+                    <span>Unlock</span>
+                    <span>{lock.lockEndsAt ? new Date(lock.lockEndsAt).toLocaleDateString() : '—'}</span>
+                  </div>
+                </div>
+              );
+            })}
+            {topBribes.length > 0 ? (
+              <div className="flex flex-col gap-2 rounded-xl border border-foreground/10 bg-background/40 px-4 py-3 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-foreground">Top Bribes</span>
+                  <span className="text-foreground/60 text-xs">ROI · USD value</span>
+                </div>
+                <div className="flex flex-col gap-2">
+                  {topBribes.map((bribe) => (
+                    <div key={bribe.id} className="flex items-center justify-between text-foreground/80">
+                      <div className="flex flex-col">
+                        <span className="font-medium text-foreground">{bribe.gauge.name ?? shortenAddress(bribe.gauge.address)}</span>
+                        <span className="text-xs text-foreground/60">
+                          {bribe.rewardToken.symbol} · {formatCurrency(bribe.rewardValueUsd ?? undefined, '—')}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium text-foreground">{formatPercentage(bribe.roiPercentage)}</p>
+                        <p className="text-xs text-foreground/60">
+                          Epoch {bribe.epoch.epochNumber ?? '—'}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-dashed border-foreground/15 bg-background/40 px-4 py-6 text-center text-sm text-foreground/60">
+                Bribe data unavailable. Configure governance sync to populate.
+              </div>
+            )}
+          </div>
+        </section>
+
         <section className="grid gap-4 md:grid-cols-2">
           {wallets.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-foreground/15 bg-foreground/5 p-6 text-sm text-foreground/70">

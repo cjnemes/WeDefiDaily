@@ -16,6 +16,10 @@ const envSchema = z.object({
   COINMARKETCAP_API_KEY: z.string().optional(),
   COINGECKO_API_KEY: z.string().optional(),
   ETHERSCAN_API_KEY: z.string().optional(),
+  AERODROME_API_URL: z.string().optional(),
+  AERODROME_SUBGRAPH_URL: z.string().optional(),
+  THENA_API_URL: z.string().optional(),
+  GOVERNANCE_REFRESH_INTERVAL_MINUTES: z.coerce.number().int().positive().optional(),
 });
 
 export const env = envSchema.parse(process.env);

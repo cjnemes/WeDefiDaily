@@ -20,6 +20,7 @@ model Chain {
   wallets               Wallet[]
   protocols             Protocol[]
   tokens                Token[]
+  gauges                Gauge[]
 }
 
 model Wallet {
@@ -33,6 +34,7 @@ model Wallet {
 
   chain     Chain    @relation(fields: [chainId], references: [id], onDelete: Cascade)
   balances  TokenBalance[]
+  governanceLocks GovernanceLock[]
 
   @@unique([address, chainId], map: "wallet_address_chain_unique")
 }
@@ -48,6 +50,9 @@ model Protocol {
   updatedAt DateTime @updatedAt
 
   chain     Chain    @relation(fields: [chainId], references: [id], onDelete: Cascade)
+  governanceLocks GovernanceLock[]
+  voteEpochs     VoteEpoch[]
+  gauges         Gauge[]
 }
 
 model Token {
@@ -65,6 +70,7 @@ model Token {
   chain            Chain           @relation(fields: [chainId], references: [id], onDelete: Cascade)
   balances         TokenBalance[]
   priceSnapshots   PriceSnapshot[]
+  bribeRewards     Bribe[]  @relation("BribeRewardToken")
 
   @@unique([chainId, address], map: "token_chain_address_unique")
 }
@@ -100,4 +106,102 @@ model PriceSnapshot {
   token       Token    @relation(fields: [tokenId], references: [id], onDelete: Cascade)
 
   @@index([tokenId, recordedAt], map: "price_snapshot_token_recorded_idx")
+}
+
+model GovernanceLock {
+  id               String   @id @default(uuid())
+  protocolId       String
+  walletId         String
+  lockAmount       Decimal  @db.Decimal(36, 18)
+  votingPower      Decimal  @db.Decimal(36, 18)
+  boostMultiplier  Decimal? @db.Decimal(36, 18)
+  lockEndsAt       DateTime?
+  lastRefreshedAt  DateTime @default(now())
+  metadata         Json?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  protocol         Protocol @relation(fields: [protocolId], references: [id], onDelete: Cascade)
+  wallet           Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  voteSnapshots    VotePowerSnapshot[]
+
+  @@unique([protocolId, walletId], map: "governance_lock_protocol_wallet_unique")
+  @@index([walletId])
+  @@index([protocolId])
+}
+
+model VoteEpoch {
+  id          String   @id @default(uuid())
+  protocolId  String
+  epochNumber Int?
+  startsAt    DateTime
+  endsAt      DateTime
+  snapshotAt  DateTime?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  protocol    Protocol   @relation(fields: [protocolId], references: [id], onDelete: Cascade)
+  bribes      Bribe[]
+  votePower   VotePowerSnapshot[]
+
+  @@index([protocolId, startsAt])
+  @@unique([protocolId, startsAt], map: "vote_epoch_protocol_start_unique")
+}
+
+model Gauge {
+  id         String   @id @default(uuid())
+  protocolId String
+  chainId    Int
+  address    String   @db.VarChar(64)
+  name       String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  protocol   Protocol @relation(fields: [protocolId], references: [id], onDelete: Cascade)
+  chain      Chain    @relation(fields: [chainId], references: [id], onDelete: Cascade)
+  bribes     Bribe[]
+
+  @@unique([protocolId, address], map: "gauge_protocol_address_unique")
+  @@index([chainId])
+}
+
+model Bribe {
+  id             String   @id @default(uuid())
+  gaugeId        String
+  epochId        String
+  rewardTokenId  String
+  rewardAmount   Decimal  @db.Decimal(36, 18)
+  rewardValueUsd Decimal? @db.Decimal(36, 18)
+  totalVotes     Decimal? @db.Decimal(36, 18)
+  roiPercentage  Decimal? @db.Decimal(36, 18)
+  sponsorAddress String?  @db.VarChar(64)
+  source         String?  @db.VarChar(64)
+  metadata       Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  gauge          Gauge    @relation(fields: [gaugeId], references: [id], onDelete: Cascade)
+  epoch          VoteEpoch @relation(fields: [epochId], references: [id], onDelete: Cascade)
+  rewardToken    Token    @relation("BribeRewardToken", fields: [rewardTokenId], references: [id], onDelete: Cascade)
+
+  @@unique([gaugeId, epochId, rewardTokenId], map: "bribe_unique_reward")
+  @@index([epochId])
+}
+
+model VotePowerSnapshot {
+  id               String   @id @default(uuid())
+  governanceLockId String
+  epochId          String?
+  votingPower      Decimal  @db.Decimal(36, 18)
+  capturedAt       DateTime @default(now())
+  metadata         Json?
+  createdAt        DateTime @default(now())
+
+  governanceLock   GovernanceLock @relation(fields: [governanceLockId], references: [id], onDelete: Cascade)
+  epoch            VoteEpoch?      @relation(fields: [epochId], references: [id], onDelete: Cascade)
+
+  @@index([governanceLockId, capturedAt])
+  @@index([epochId])
 }
