@@ -5,6 +5,7 @@
   - Use for RPC read access on Base and Ethereum (supports historical state, logs, trace APIs).
   - Consider dedicated app keys per environment (dev, prod) to isolate quota usage.
   - Employ WebSockets for subscription-based updates (new blocks, pending transactions) powering live alerts.
+  - `alchemy_getTokenBalances`, `alchemy_getTokenMetadata`, and `eth_getBalance` power the portfolio sync job.
 
 ## On-Chain Data APIs
 - **Etherscan v2 API**
@@ -24,6 +25,7 @@
   - Redundant price feed and supplemental data (categories, developer stats, social metrics).
   - Useful for long-tail tokens not covered robustly by CMC.
   - Watch monthly call limits; implement backoff and caching.
+  - `simple/token_price/{platform}` and `simple/price` endpoints populate `PriceSnapshot` rows and USD valuations.
 
 ## Protocol-Specific Data
 - **Aerodrome Finance**

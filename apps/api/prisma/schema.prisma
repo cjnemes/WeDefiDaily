@@ -19,6 +19,7 @@ model Chain {
 
   wallets               Wallet[]
   protocols             Protocol[]
+  tokens                Token[]
 }
 
 model Wallet {
@@ -31,6 +32,7 @@ model Wallet {
   updatedAt DateTime @updatedAt
 
   chain     Chain    @relation(fields: [chainId], references: [id], onDelete: Cascade)
+  balances  TokenBalance[]
 
   @@unique([address, chainId], map: "wallet_address_chain_unique")
 }
@@ -46,4 +48,56 @@ model Protocol {
   updatedAt DateTime @updatedAt
 
   chain     Chain    @relation(fields: [chainId], references: [id], onDelete: Cascade)
+}
+
+model Token {
+  id        String   @id @default(uuid())
+  chainId   Int
+  address   String   @db.VarChar(64)
+  symbol    String   @db.VarChar(32)
+  name      String
+  decimals  Int
+  isNative  Boolean  @default(false)
+  metadata  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  chain            Chain           @relation(fields: [chainId], references: [id], onDelete: Cascade)
+  balances         TokenBalance[]
+  priceSnapshots   PriceSnapshot[]
+
+  @@unique([chainId, address], map: "token_chain_address_unique")
+}
+
+model TokenBalance {
+  id             String   @id @default(uuid())
+  walletId       String
+  tokenId        String
+  rawBalance     String
+  quantity       Decimal  @default(0)
+  usdValue       Decimal? @db.Decimal(36, 18)
+  blockNumber    BigInt?
+  fetchedAt      DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  wallet         Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  token          Token    @relation(fields: [tokenId], references: [id], onDelete: Cascade)
+
+  @@unique([walletId, tokenId], map: "token_balance_wallet_token_unique")
+  @@index([tokenId])
+  @@index([walletId])
+}
+
+model PriceSnapshot {
+  id          String   @id @default(uuid())
+  tokenId     String
+  priceUsd    Decimal  @db.Decimal(36, 18)
+  source      String   @db.VarChar(32)
+  recordedAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  token       Token    @relation(fields: [tokenId], references: [id], onDelete: Cascade)
+
+  @@index([tokenId, recordedAt], map: "price_snapshot_token_recorded_idx")
 }
