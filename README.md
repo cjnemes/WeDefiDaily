@@ -1,5 +1,7 @@
 # WeDefiDaily
 
+[![CI](https://github.com/cjnemes/WeDefiDaily/actions/workflows/ci.yml/badge.svg)](https://github.com/cjnemes/WeDefiDaily/actions/workflows/ci.yml)
+
 Personal DeFi command center focused on Base-native incentives, ve-token governance, and multi-chain portfolio tracking.
 
 ## Monorepo Layout
@@ -24,6 +26,7 @@ Personal DeFi command center focused on Base-native incentives, ve-token governa
 - ESLint + Prettier for consistent code style.
 - Prisma ORM for Postgres-backed persistence.
 - Docker Compose scaffolding for Postgres-backed persistence.
+- GitHub Actions CI pipeline running lint, type checks, and Prisma validation.
 
 ## Next Steps
 - Add Base/Aerodrome data connectors and on-chain sync jobs.
@@ -48,3 +51,9 @@ Personal DeFi command center focused on Base-native incentives, ve-token governa
   ```
 
   Returns `201 Created` for new wallets or `200 OK` when an existing record is reused/updated.
+
+## Useful Commands
+
+- `npm run lint` – lint both workspaces.
+- `npm run typecheck` – run TypeScript type checking across web and API.
+- `npm run db:validate` – ensure the Prisma schema is valid (used by CI).

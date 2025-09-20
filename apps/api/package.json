@@ -15,7 +15,8 @@
     "prisma:db:push": "dotenv -e ../../.env -- prisma db push",
     "prisma:migrate:dev": "dotenv -e ../../.env -- prisma migrate dev",
     "prisma:migrate:deploy": "dotenv -e ../../.env -- prisma migrate deploy",
-    "prisma:studio": "dotenv -e ../../.env -- prisma studio"
+    "prisma:studio": "dotenv -e ../../.env -- prisma studio",
+    "prisma:validate": "dotenv -e ../../.env.example -- prisma validate"
   },
   "dependencies": {
     "@fastify/cors": "^10.0.1",
