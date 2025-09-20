@@ -15,10 +15,11 @@ Personal DeFi command center focused on Base-native incentives, ve-token governa
 3. Start Postgres (Docker Desktop required): `docker compose up -d postgres`
 4. Push the Prisma schema to your database: `npm run db:push`
 5. Generate the Prisma client (if needed): `npm run db:generate`
-6. Run services in parallel (recommended in separate terminals):
+6. Seed balances (optional, requires API keys): `npm run sync:balances`
+7. Run services in parallel (recommended in separate terminals):
    - `npm run dev:api`
    - `npm run dev:web`
-7. Visit `http://localhost:3000` for the web experience. The API listens on `http://localhost:4000` by default.
+8. Visit `http://localhost:3000` for the web experience. The API listens on `http://localhost:4000` by default.
 
 ## Tooling Highlights
 - TypeScript across the stack.
@@ -27,6 +28,7 @@ Personal DeFi command center focused on Base-native incentives, ve-token governa
 - Prisma ORM for Postgres-backed persistence.
 - Docker Compose scaffolding for Postgres-backed persistence.
 - GitHub Actions CI pipeline running lint, type checks, and Prisma validation.
+- Alchemy + CoinGecko powered balance sync job (`npm run sync:balances`).
 
 ## Next Steps
 - Add Base/Aerodrome data connectors and on-chain sync jobs.
@@ -51,9 +53,11 @@ Personal DeFi command center focused on Base-native incentives, ve-token governa
   ```
 
   Returns `201 Created` for new wallets or `200 OK` when an existing record is reused/updated.
+- `GET /v1/portfolio` – aggregates balances across tracked wallets (USD value, per-token breakdown).
 
 ## Useful Commands
 
 - `npm run lint` – lint both workspaces.
 - `npm run typecheck` – run TypeScript type checking across web and API.
 - `npm run db:validate` – ensure the Prisma schema is valid (used by CI).
+- `npm run sync:balances` – fetch ERC-20 + native balances for configured wallets using Alchemy and update USD valuations via CoinGecko.

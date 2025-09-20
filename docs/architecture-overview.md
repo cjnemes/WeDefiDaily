@@ -23,6 +23,7 @@
 1. **Portfolio Engine**
    - Aggregates wallet balances, positions, and valuations across chains.
    - Maintains projections (e.g., unlock timelines, APR decay) using historical data.
+   - Balance sync job (`npm run sync:balances`) ingests on-chain balances via Alchemy and enriches with CoinGecko price snapshots.
 
 2. **Vote Analytics**
    - Integrates Aerodrome and veTHE data to rank bribes and recommend allocations.
