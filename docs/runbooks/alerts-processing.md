@@ -32,3 +32,4 @@ Use this checklist when validating the alert pipeline (Phase 3a) locally.
 - Without a real Gammaswap feed, alerts are generated from the mock fixture and focus on risk severity logic.
 - The alert processor retries gracefully when token prices fail (e.g., CoinGecko limits) and still persists alerts with available metrics.
 - Delivery adapters are defined in `apps/api/src/jobs/process-alerts.ts` (default: `console`). Additional adapters (Slack, webhook, email) can be added by implementing the interface in `apps/api/src/services/alert-delivery.ts`.
+- When wiring additional delivery integrations, extend the `AlertDelivery.channel` enumeration with the integration name (for example `slack`, `email`, or `webhook`).
