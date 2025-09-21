@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import Decimal from 'decimal.js';
-import { buildDigest, renderDigestMarkdown } from './digest';
+import { buildDigest, renderDigestMarkdown, renderDigestHtml, summarizeDigest } from './digest';
 
 const prismaStub = {
   wallet: {
@@ -103,7 +103,7 @@ describe('digest service', () => {
   });
 
   it('renders markdown digest with expected sections', () => {
-    const markdown = renderDigestMarkdown({
+    const digest = {
       meta: {
         generatedAt: new Date().toISOString(),
         portfolioTotal: '1000',
@@ -150,11 +150,21 @@ describe('digest service', () => {
         ],
         warnings: [],
       },
-    });
+    };
+
+    const markdown = renderDigestMarkdown(digest);
 
     expect(markdown).toContain('# WeDefiDaily Digest');
     expect(markdown).toContain('## Executive Summary');
     expect(markdown).toContain('## Portfolio Overview');
     expect(markdown).toContain('Claim rewards');
+
+    const html = renderDigestHtml(digest);
+    expect(html).toContain('<html');
+    expect(html).toContain('Claim rewards');
+
+    const summary = summarizeDigest(digest);
+    expect(summary).toContain('portfolio=1000');
+    expect(summary).toContain('alerts');
   });
 });

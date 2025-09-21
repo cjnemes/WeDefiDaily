@@ -1,69 +1,42 @@
-# Daily Digest Generation Runbook
+# Daily Digest Runbook
 
-Use this checklist when running the daily digest job or validating its output.
+Use this guide to generate and review the Phase 3a daily digest output.
 
 ## Prerequisites
-- Postgres running locally with up-to-date data
-- Recent data syncs for optimal digest quality:
-  ```bash
-  npm run sync:balances
-  npm run sync:governance
-  npm run sync:rewards
-  npm run sync:gammaswap
-  npm run process:alerts
-  ```
+- API service configuration initialized (`.env` with database credentials).
+- Balance/governance/rewards sync jobs have been executed recently (`npm run sync:*`).
+- Output directory defaults to `storage/digests` relative to the repository root.
 
-## Execution
-1. Generate the daily digest:
-   ```bash
-   npm run generate:digest
-   ```
-2. Check output files in `temp/` directory:
-   - `digest-YYYY-MM-DDTHH-MM-SS-SSS.md` - Markdown format for reading
-   - `digest-YYYY-MM-DDTHH-MM-SS-SSS.csv` - CSV format for spreadsheet analysis
-3. Review console output for summary statistics and any critical alerts
+## Commands
 
-## Digest Sections
-The digest includes:
-- **Executive Summary**: Portfolio value, wallet count, actionable rewards, alert counts
-- **Action Required**: Overdue claims and critical alerts (if any)
-- **Portfolio Overview**: Total value and top holdings by USD value
-- **Governance & Voting**: Voting power, upcoming epochs, top bribe opportunities
-- **Claimable Rewards**: Net value summary and upcoming deadlines
-- **Gammaswap Positions**: Position count, health ratios, and risk levels
-- **Warnings**: Non-critical alerts and notifications
+### Markdown Output
+```bash
+npm run generate:digest
+# Saves to storage/digests/digest-<timestamp>.md
+```
 
-## Automation Ideas
-- Schedule via cron for daily 8am generation:
-  ```bash
-  0 8 * * * cd /path/to/WeDefiDaily && npm run generate:digest
-  ```
-- Email delivery: pipe markdown output to email tool
-- Telegram integration: post digest summary to channel
+### HTML Output
+```bash
+npm run generate:digest -- --format=html
+# Saves to storage/digests/digest-<timestamp>.html
+```
+
+### Both Markdown & HTML
+```bash
+npm run generate:digest -- --format=both
+```
+
+### Custom Output Path & Stdout Preview
+```bash
+npm run generate:digest -- --output=tmp/digest.md --stdout
+```
+
+## Verification Checklist
+- Open the generated file(s) and confirm sections exist: Executive Summary, Portfolio, Governance, Rewards, Gammaswap, Alerts.
+- Ensure currency/percentage values are formatted correctly.
+- Confirm summary line at the end of the CLI run (e.g., `Digest · portfolio=...`).
 
 ## Troubleshooting
-- **Empty sections**: Run data sync jobs first to populate with fresh data
-- **Missing USD values**: Check CoinGecko API key and price sync status
-- **No rewards**: Verify protocol API configurations and wallet addresses
-- **File permissions**: Ensure `temp/` directory exists and is writable
-
-## Output Format Examples
-
-### Console Summary
-```
-✅ Daily digest generated:
-   Markdown: /path/to/temp/digest-2024-12-21T08-00-00-000Z.md
-   CSV: /path/to/temp/digest-2024-12-21T08-00-00-000Z.csv
-
-📊 Summary:
-   Portfolio: $12,345.67
-   Actionable rewards: 3
-   Critical alerts: 0
-   Warning alerts: 1
-```
-
-### Critical Alert Example
-```
-🚨 CRITICAL ALERTS:
-   • Gammaswap LP health at 1.04x: Position below safe threshold
-```
+- If the job fails, check the database for required records (balances, governance locks, etc.).
+- HTML output escapes markdown into `<pre>` for now; richer formatting can be layered later.
+- Delete old files from `storage/digests` as needed to keep the directory tidy.

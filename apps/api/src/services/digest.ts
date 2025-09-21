@@ -412,3 +412,36 @@ export function renderDigestMarkdown(data: DigestData): string {
 
   return lines.join('\n');
 }
+
+export function renderDigestHtml(data: DigestData): string {
+  const markdown = renderDigestMarkdown(data);
+  const escapedMarkdown = markdown
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  return `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>WeDefiDaily Digest</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; padding: 24px; color: #111827; background-color: #ffffff; }
+      h1, h2, h3 { color: #0f172a; }
+      table { border-collapse: collapse; margin: 12px 0; width: 100%; }
+      th, td { border: 1px solid #cbd5f5; padding: 8px; text-align: left; }
+      code { background: #f1f5f9; padding: 2px 4px; border-radius: 4px; }
+      ul { padding-left: 20px; }
+      .meta { color: #475569; font-size: 0.875rem; }
+    </style>
+  </head>
+  <body>
+    <div class="meta">Generated at ${new Date(data.meta.generatedAt).toLocaleString()}</div>
+    <pre>${escapedMarkdown}</pre>
+  </body>
+</html>`;
+}
+
+export function summarizeDigest(data: DigestData): string {
+  return `Digest · portfolio=${data.meta.portfolioTotal} · wallets=${data.meta.walletsTracked} · actionableRewards=${data.meta.actionableRewards} · alerts(c=${data.meta.criticalAlerts}, w=${data.meta.warningAlerts})`;
+}
