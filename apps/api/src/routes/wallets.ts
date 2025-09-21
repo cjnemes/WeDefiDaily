@@ -41,6 +41,9 @@ function serializeWallet(wallet: WalletWithRelations) {
     address: wallet.address,
     label: wallet.label,
     chainId: wallet.chainId,
+    chainName: wallet.chain.name,
+    chainShortName: wallet.chain.shortName ?? undefined,
+    nativeCurrencySymbol: wallet.chain.nativeCurrencySymbol ?? undefined,
     createdAt: wallet.createdAt.toISOString(),
     updatedAt: wallet.updatedAt.toISOString(),
     chain: {
@@ -160,5 +163,81 @@ export const walletRoutes: FastifyPluginCallback = (app, _opts, done) => {
       return reply.status(500).send({ error: 'Failed to persist wallet' });
     }
   });
+
+  // GET /v1/wallets/:id - Get wallet by ID
+  app.get('/:id', async (request, reply) => {
+    const { id } = request.params as { id: string };
+
+    const wallet = await app.prisma.wallet.findUnique({
+      where: { id },
+      include: walletInclude,
+    });
+
+    if (!wallet) {
+      return reply.status(404).send({
+        error: 'Wallet not found',
+      });
+    }
+
+    return reply.send({
+      data: serializeWallet(wallet),
+    });
+  });
+
+  // PUT /v1/wallets/:id - Update wallet by ID
+  app.put('/:id', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const updateSchema = z.object({
+      label: z.string().trim().min(1).max(64).optional(),
+    });
+
+    const parsed = updateSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.status(400).send({
+        error: 'Invalid request body',
+        details: parsed.error.flatten(),
+      });
+    }
+
+    try {
+      const wallet = await app.prisma.wallet.update({
+        where: { id },
+        data: parsed.data,
+        include: walletInclude,
+      });
+
+      return reply.send({
+        data: serializeWallet(wallet),
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        return reply.status(404).send({
+          error: 'Wallet not found',
+        });
+      }
+      throw error;
+    }
+  });
+
+  // DELETE /v1/wallets/:id - Delete wallet by ID
+  app.delete('/:id', async (request, reply) => {
+    const { id } = request.params as { id: string };
+
+    try {
+      await app.prisma.wallet.delete({
+        where: { id },
+      });
+
+      return reply.status(204).send();
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        return reply.status(404).send({
+          error: 'Wallet not found',
+        });
+      }
+      throw error;
+    }
+  });
+
   done();
 };

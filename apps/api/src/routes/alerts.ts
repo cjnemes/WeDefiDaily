@@ -1,76 +1,22 @@
 import type { FastifyPluginCallback } from 'fastify';
 import { Prisma } from '@prisma/client';
 import { z } from 'zod';
+import {
+  ALERT_WITH_RELATIONS_INCLUDE,
+  AlertWithRelations,
+  hasSuccessfulDelivery,
+} from '../services/alert-delivery';
 
 const ALERT_QUERY_SCHEMA = z.object({
-  status: z.enum(['pending', 'acknowledged', 'resolved']).optional(),
+  status: z.enum(['pending', 'acknowledged', 'resolved', 'dispatched']).optional(),
   severity: z.enum(['info', 'warning', 'critical']).optional(),
+  channel: z.string().optional(),
   limit: z.coerce.number().int().positive().max(200).optional(),
 });
 
 const ALERT_ACK_SCHEMA = z.object({
   id: z.string().uuid(),
 });
-
-const ALERT_INCLUDE = {
-  wallet: {
-    select: {
-      id: true,
-      address: true,
-      label: true,
-      chainId: true,
-    },
-  },
-  protocol: {
-    select: {
-      id: true,
-      name: true,
-      slug: true,
-    },
-  },
-  token: {
-    select: {
-      id: true,
-      symbol: true,
-      name: true,
-    },
-  },
-  rewardOpportunity: {
-    select: {
-      id: true,
-      contextLabel: true,
-      amount: true,
-      usdValue: true,
-      claimDeadline: true,
-    },
-  },
-  gammaswapPosition: {
-    select: {
-      id: true,
-      positionType: true,
-      healthRatio: true,
-      notional: true,
-      debtValue: true,
-      wallet: {
-        select: { id: true, address: true, label: true },
-      },
-      pool: {
-        select: {
-          id: true,
-          poolAddress: true,
-          baseSymbol: true,
-          quoteSymbol: true,
-        },
-      },
-    },
-  },
-  deliveries: {
-    orderBy: { createdAt: 'desc' as const },
-    take: 5,
-  },
-} satisfies Prisma.AlertInclude;
-
-type AlertWithRelations = Prisma.AlertGetPayload<{ include: typeof ALERT_INCLUDE }>;
 
 export function serializeAlert(alert: AlertWithRelations) {
   return {
@@ -138,13 +84,15 @@ export function serializeAlert(alert: AlertWithRelations) {
             : null,
         }
       : null,
-    deliveries: alert.deliveries.map((delivery) => ({
-      id: delivery.id,
-      channel: delivery.channel,
-      success: delivery.success,
-      createdAt: delivery.createdAt.toISOString(),
-      metadata: delivery.metadata,
-    })),
+    deliveries: [...alert.deliveries]
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .map((delivery) => ({
+        id: delivery.id,
+        channel: delivery.channel,
+        success: delivery.success,
+        createdAt: delivery.createdAt.toISOString(),
+        metadata: delivery.metadata,
+      })),
   };
 }
 
@@ -158,15 +106,19 @@ export const alertsRoutes: FastifyPluginCallback = (app, _opts, done) => {
         status: filters.status ?? undefined,
         severity: filters.severity ?? undefined,
       },
-      include: ALERT_INCLUDE,
+      include: ALERT_WITH_RELATIONS_INCLUDE,
       orderBy: [{ triggerAt: 'desc' }],
       take: limit,
     });
 
+    const filtered = filters.channel
+      ? alerts.filter((alert) => hasSuccessfulDelivery(alert, filters.channel as string))
+      : alerts;
+
     return reply.send({
-      data: alerts.map(serializeAlert),
+      data: filtered.map(serializeAlert),
       meta: {
-        count: alerts.length,
+        count: filtered.length,
         generatedAt: new Date().toISOString(),
       },
     });

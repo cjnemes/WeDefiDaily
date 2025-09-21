@@ -1,6 +1,12 @@
 import crypto from 'node:crypto';
 import Decimal from 'decimal.js';
 import { Prisma, PrismaClient } from '@prisma/client';
+import {
+  ALERT_WITH_RELATIONS_INCLUDE,
+  AlertWithRelations,
+  consoleAlertAdapter,
+  hasSuccessfulDelivery,
+} from '../services/alert-delivery';
 
 const prisma = new PrismaClient();
 
@@ -108,37 +114,67 @@ async function upsertAlert(params: {
     },
   });
 
-  // Enhanced console logging with formatting
-  const severityEmoji = params.severity === 'critical' ? '🚨' : params.severity === 'warning' ? '⚠️' : 'ℹ️';
-  const typeLabel = params.type.replace('_', ' ').toUpperCase();
+  return alert;
+}
 
-  console.info(`${severityEmoji} ${typeLabel} ALERT: ${params.title}`);
-  if (params.description) {
-    console.info(`   Description: ${params.description}`);
-  }
-  if (params.walletId && params.protocolId) {
-    console.info(`   Context: Wallet ${params.walletId?.slice(0, 8)}... via ${params.protocolId}`);
-  }
-  console.info(`   Triggered: ${(params.triggerAt || new Date()).toISOString()}`);
-  if (params.expiresAt) {
-    console.info(`   Expires: ${params.expiresAt.toISOString()}`);
-  }
-  console.info('');
+const DELIVERY_ADAPTERS = [consoleAlertAdapter];
 
-  await prisma.alertDelivery.create({
-    data: {
-      alertId: alert.id,
-      channel: 'console',
-      success: true,
-      metadata: {
-        deliveredAt: new Date().toISOString(),
-        severity: params.severity,
-        formattedOutput: true
-      },
-    },
+async function dispatchPendingAlerts() {
+  if (DELIVERY_ADAPTERS.length === 0) {
+    return;
+  }
+
+  const pendingAlerts = await prisma.alert.findMany({
+    where: { status: 'pending' },
+    include: ALERT_WITH_RELATIONS_INCLUDE,
+    orderBy: [{ triggerAt: 'asc' }],
+    take: 50,
   });
 
-  return alert;
+  for (const alert of pendingAlerts) {
+    let delivered = false;
+
+    for (const adapter of DELIVERY_ADAPTERS) {
+      if (hasSuccessfulDelivery(alert as AlertWithRelations, adapter.channel)) {
+        continue;
+      }
+
+      try {
+        const result = await adapter.deliver(alert as AlertWithRelations);
+        const metadata = result.metadata as Prisma.InputJsonValue | undefined;
+        await prisma.alertDelivery.create({
+          data: {
+            alertId: alert.id,
+            channel: adapter.channel,
+            success: result.success,
+            metadata,
+          },
+        });
+        if (result.success) {
+          delivered = true;
+        }
+      } catch (error) {
+        await prisma.alertDelivery.create({
+          data: {
+            alertId: alert.id,
+            channel: adapter.channel,
+            success: false,
+            metadata: {
+              error: error instanceof Error ? error.message : String(error),
+              deliveredAt: new Date().toISOString(),
+            } as Prisma.InputJsonValue,
+          },
+        });
+      }
+    }
+
+    if (delivered) {
+      await prisma.alert.update({
+        where: { id: alert.id },
+        data: { status: 'dispatched', updatedAt: now() },
+      });
+    }
+  }
 }
 
 async function generateRewardAlerts(activeHashes: Set<string>) {
@@ -332,17 +368,21 @@ async function generateGovernanceAlerts(activeHashes: Set<string>) {
 }
 
 async function resolveStaleAlerts(activeHashes: Set<string>) {
-  if (activeHashes.size === 0) {
-    return;
-  }
+  // Always check for stale alerts, even when no active hashes exist
+  // This ensures previously pending alerts get resolved when conditions change
+  const whereClause = activeHashes.size > 0
+    ? {
+        status: 'pending' as const,
+        contextHash: {
+          notIn: Array.from(activeHashes),
+        },
+      }
+    : {
+        status: 'pending' as const,
+      };
 
   await prisma.alert.updateMany({
-    where: {
-      status: 'pending',
-      contextHash: {
-        notIn: Array.from(activeHashes),
-      },
-    },
+    where: whereClause,
     data: {
       status: 'resolved',
       updatedAt: now(),
@@ -357,6 +397,7 @@ async function main() {
   await generateRewardAlerts(activeHashes);
   await generateGammaswapAlerts(activeHashes);
   await generateGovernanceAlerts(activeHashes);
+  await dispatchPendingAlerts();
   await resolveStaleAlerts(activeHashes);
 }
 

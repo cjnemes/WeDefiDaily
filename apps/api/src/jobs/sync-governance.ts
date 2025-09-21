@@ -249,6 +249,21 @@ async function syncProtocol(config: GovernanceProtocolConfig) {
         try {
           const lock = await lockFetcher(apiUrl, wallet.address);
           if (!lock) {
+            // User has unlocked or migrated - clear the existing lock
+            await prisma.governanceLock.updateMany({
+              where: {
+                walletId: wallet.id,
+                protocolId: protocol.id,
+              },
+              data: {
+                lockAmount: new Decimal(0),
+                votingPower: new Decimal(0),
+                boostMultiplier: null,
+                lockEndsAt: null,
+                lastRefreshedAt: new Date(),
+              },
+            });
+            console.log(`Cleared governance lock for ${wallet.address} on ${protocol.name} (no longer locked)`);
             return;
           }
 
