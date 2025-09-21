@@ -164,5 +164,31 @@ export const governanceRoutes: FastifyPluginCallback = (app, _opts, done) => {
     });
   });
 
+  app.post('/sync', async (_request, reply) => {
+    try {
+      // Check if sync-governance job exists
+      const { exec } = await import('child_process');
+      const { promisify } = await import('util');
+      const execAsync = promisify(exec);
+
+      // Run the sync job in background - don't wait for it to complete
+      execAsync('npm run sync:governance').catch((error) => {
+        console.error('Failed to run governance sync:', error);
+      });
+
+      return reply.send({
+        success: true,
+        message: 'Governance sync initiated',
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      return reply.code(500).send({
+        success: false,
+        error: 'Failed to initiate governance sync',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+
   done();
 };
