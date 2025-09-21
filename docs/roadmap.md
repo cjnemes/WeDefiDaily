@@ -3,7 +3,8 @@
 ## Status Snapshot
 - ✅ **Phase 0 – Discovery & Foundations**: Repository scaffolding, environment handling, CI, Prisma schema, and baseline sync jobs are in place.
 - ✅ **Phase 1 – Core Data Infrastructure**: Data adapters, portfolio/governance endpoints, and dashboard tiles are live.
-- 🔄 **Phase 2 – Protocol Modules**: Yield tracker + ve modules shipped; Gammaswap ingestion and alert wiring are underway.
+- ✅ **Phase 2 – Protocol Modules**: Yield tracker, governance modules, and Gammaswap integration with risk assessment complete.
+- 🔄 **Phase 3a – Alerting & Digest**: Core infrastructure delivered; remaining work on external delivery channels.
 
 ## Near-Term Focus
 
@@ -13,25 +14,26 @@
 - `/v1/rewards` powers the Action Required UI panel; regression tests cover normalization.
 - Follow-up: monitor real API keys + wallets, capture feedback after first live run.
 
-### Phase 2c – Gammaswap Integration (1–2 weeks)
-- Model LP/borrow data structures; ingest health factors, liquidation thresholds, and API-provided metadata. *(In progress)*
-- Add positions table hydrator via Alchemy or Gammaswap subgraph/API fetcher. *(In progress – initial adapter + risk heuristics shipped)*
-- Emit risk alerts for utilization spikes or elevated borrow rates. *(In progress – metadata marks signals; hook into alert job next)*
-- Web UI: Gammaswap card with position PnL and risk flags. *(Initial version live; expand drill-downs + sorting)*
-- Update documentation for new environment keys or rate limits. *(Pending once production endpoint set)*
+### Phase 2c – Gammaswap Integration (✅ Complete)
+- Model LP/borrow data structures; ingest health factors, liquidation thresholds, and API-provided metadata. *(✅ Complete)*
+- Add positions table hydrator via Alchemy or Gammaswap subgraph/API fetcher. *(✅ Complete – adapter with risk heuristics shipped)*
+- Emit risk alerts for utilization spikes or elevated borrow rates. *(✅ Complete – integrated into alert processing pipeline)*
+- Web UI: Gammaswap card with position PnL and risk flags. *(✅ Complete – live with risk indicators)*
+- Update documentation for new environment keys or rate limits. *(✅ Complete – runbooks and documentation updated)*
 
 ## Mid-Term Initiatives
 
-### Phase 3a – Alerting & Digest (≈2 weeks)
-- Introduce a job runner (BullMQ/Temporal-lite) and multi-channel notifications (Telegram, email, CLI).
-- Alert types: claim due, epoch countdown, risk triggers, price thresholds.
-- Generate a daily digest summarizing portfolio/governance actions.
-- Provide configuration storage for alert preferences and channel wiring.
+### Phase 3a – Alerting & Digest (🔄 Mostly Complete)
+- ✅ Alert processing pipeline with database schema and lifecycle management
+- ✅ Alert types: claim due, epoch countdown, risk triggers, price thresholds
+- ✅ Generate daily digest summarizing portfolio/governance actions (Markdown + CSV export)
+- ✅ Enhanced CLI notifications with emoji formatting and structured output
+- ⏳ **Remaining**: External delivery channels (Telegram, email) and job runner (BullMQ/Temporal)
 
 ### Phase 3b – Advanced UX Enhancements (1–2 weeks)
 - Interactive watchlist with add/edit flows and real-time price trends.
 - Drill-down pages for wallets and governance epochs.
-- Export capability (Markdown/CSV) for the daily digest.
+- ✅ Export capability (Markdown/CSV) for the daily digest *(delivered early in Phase 3a)*
 - Client-side caching powered by React Query for smoother refresh.
 
 ## Long-Range Exploration
