@@ -13,10 +13,11 @@ Use this checklist when validating the alert pipeline (Phase 3a) locally.
    npm run sync:gammaswap
    npm run process:alerts
    ```
-   The sync populates positions/metrics; the alert processor upserts alerts based on thresholds.
-2. Inspect pending alerts via API:
+   The sync populates positions/metrics; the alert processor upserts alerts (status `pending`) and dispatches them through registered delivery adapters.
+2. Inspect alerts via API:
    ```bash
    curl "$NEXT_PUBLIC_API_URL/v1/alerts?status=pending" | jq
+   curl "$NEXT_PUBLIC_API_URL/v1/alerts?status=dispatched&channel=console" | jq
    ```
 3. Acknowledge a critical alert:
    ```bash
@@ -30,4 +31,4 @@ Use this checklist when validating the alert pipeline (Phase 3a) locally.
 ## Notes
 - Without a real Gammaswap feed, alerts are generated from the mock fixture and focus on risk severity logic.
 - The alert processor retries gracefully when token prices fail (e.g., CoinGecko limits) and still persists alerts with available metrics.
-- When wiring live delivery channels, extend `AlertDelivery.channel` with the integration name (e.g., `slack`, `email`).
+- Delivery adapters are defined in `apps/api/src/jobs/process-alerts.ts` (default: `console`). Additional adapters (Slack, webhook, email) can be added by implementing the interface in `apps/api/src/services/alert-delivery.ts`.
