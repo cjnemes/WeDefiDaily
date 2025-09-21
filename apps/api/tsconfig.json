@@ -10,7 +10,7 @@
     "skipLibCheck": true,
     "moduleResolution": "node",
     "resolveJsonModule": true,
-    "types": ["node"],
+    "types": ["node", "vitest/globals"],
     "forceConsistentCasingInFileNames": true
   },
   "include": ["src"],

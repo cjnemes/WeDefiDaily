@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Roadmap Documentation
+    url: https://github.com/cjnemes/WeDefiDaily/blob/main/docs/roadmap.md
+    about: Review the roadmap before opening a new issue.
+  - name: Contribution Guidelines
+    url: https://github.com/cjnemes/WeDefiDaily/blob/main/docs/project-management.md
+    about: Read the workflow expectations for issues and PRs.

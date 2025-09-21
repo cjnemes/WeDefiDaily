@@ -39,8 +39,8 @@ const REWARD_PROTOCOLS: RewardProtocolConfig[] = [
     slug: 'gammaswap',
     name: 'Gammaswap',
     chainId: 8453,
-    apiUrl: null,
-    fetcher: fetchGammaswapRewards,
+    apiUrl: env.GAMMASWAP_API_URL,
+    fetcher: env.GAMMASWAP_API_URL ? fetchGammaswapRewards : undefined,
   },
 ];
 
@@ -158,10 +158,10 @@ async function syncProtocol(config: RewardProtocolConfig) {
     return;
   }
 
-const governanceLocks = await prisma.governanceLock.findMany({
-  where: { protocolId: protocol.id },
-  select: { id: true, walletId: true },
-});
+  const governanceLocks = await prisma.governanceLock.findMany({
+    where: { protocolId: protocol.id },
+    select: { id: true, walletId: true },
+  });
   const lockMap = new Map<string, string>();
   governanceLocks.forEach((lock) => {
     lockMap.set(lock.walletId, lock.id);

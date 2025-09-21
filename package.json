@@ -19,7 +19,10 @@
     "sync:balances": "npm run sync:balances --workspace @wedefidaily/api",
     "sync:governance": "npm run sync:governance --workspace @wedefidaily/api",
     "sync:rewards": "npm run sync:rewards --workspace @wedefidaily/api",
-    "sync:gammaswap": "npm run sync:gammaswap --workspace @wedefidaily/api"
+    "sync:gammaswap": "npm run sync:gammaswap --workspace @wedefidaily/api",
+    "process:alerts": "npm run process:alerts --workspace @wedefidaily/api",
+    "generate:digest": "npm run generate:digest --workspace @wedefidaily/api",
+    "check:price-thresholds": "npm run check:price-thresholds --workspace @wedefidaily/api"
   },
   "workspaces": [
     "apps/web",

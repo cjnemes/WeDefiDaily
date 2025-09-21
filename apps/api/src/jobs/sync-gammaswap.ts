@@ -73,6 +73,7 @@ function buildFetcherContext(walletAddress: string): GammaswapFetcherContext {
   return {
     apiUrl: CONFIG.apiUrl ?? undefined,
     walletAddress,
+    chainId: CONFIG.chainId,
   };
 }
 
@@ -152,17 +153,29 @@ const priceKeySet = new Set<string>();
 
   const priceMap = new Map<string, Decimal>();
   if (priceKeySet.size) {
-    const rawPriceMap = await fetchTokenPrices(
-      env.COINGECKO_API_KEY,
-      Array.from(priceKeySet).map((key) => {
-        const [chainId, address] = key.split(':');
-        return { chainId: Number(chainId), address };
-      })
-    );
-    rawPriceMap.forEach((value, key) => {
-      priceMap.set(key, new Decimal(value.toString()));
-    });
+    try {
+      const rawPriceMap = await fetchTokenPrices(
+        env.COINGECKO_API_KEY,
+        Array.from(priceKeySet).map((key) => {
+          const [chainId, address] = key.split(':');
+          return { chainId: Number(chainId), address };
+        })
+      );
+      rawPriceMap.forEach((value, key) => {
+        priceMap.set(key, new Decimal(value.toString()));
+      });
+    } catch (error) {
+      console.warn('Failed to fetch token prices for Gammaswap sync', error);
+    }
   }
+
+  const riskStats: Record<'critical' | 'warning' | 'healthy' | 'unknown', number> = {
+    critical: 0,
+    warning: 0,
+    healthy: 0,
+    unknown: 0,
+  };
+  let processedPositions = 0;
 
   for (const { walletId, position } of aggregatedPositions) {
     const poolId = poolIdMap.get(position.poolAddress.toLowerCase());
@@ -170,6 +183,7 @@ const priceKeySet = new Set<string>();
       continue;
     }
 
+    const poolData = poolBlueprints.get(position.poolAddress.toLowerCase());
     const assetToken = await ensureToken(position.assetToken);
     const priceKey = `${position.assetToken.chainId}:${position.assetToken.address.toLowerCase()}`;
     const price = priceMap.get(priceKey) ?? null;
@@ -180,6 +194,68 @@ const priceKeySet = new Set<string>();
     const liquidationDecimal = position.liquidationPrice ? new Decimal(position.liquidationPrice) : null;
     const pnlDecimal = position.pnlUsd ? new Decimal(position.pnlUsd) : null;
     const notionalUsd = price ? notionalDecimal.mul(price) : null;
+
+    const utilizationDecimal = poolData?.utilization
+      ? (() => {
+          const value = new Decimal(poolData.utilization);
+          return value.lte(1) ? value.mul(100) : value;
+        })()
+      : null;
+    const borrowRateDecimal = poolData?.borrowRateApr ? new Decimal(poolData.borrowRateApr) : null;
+
+    const riskSignals: string[] = [];
+    if (healthDecimal) {
+      if (healthDecimal.lessThan(1.05)) {
+        riskSignals.push('Health ratio below 1.05 (critical)');
+      } else if (healthDecimal.lessThan(1.2)) {
+        riskSignals.push('Health ratio trending toward liquidation (<1.20)');
+      }
+    }
+    if (utilizationDecimal && utilizationDecimal.greaterThan(90)) {
+      riskSignals.push(`Pool utilization high (${utilizationDecimal.toFixed(2)}%)`);
+    }
+    if (borrowRateDecimal && borrowRateDecimal.greaterThan(45)) {
+      riskSignals.push(`Borrow APR elevated (${borrowRateDecimal.toFixed(2)}%)`);
+    }
+    if (debtDecimal && debtDecimal.greaterThan(notionalDecimal.mul(0.9))) {
+      riskSignals.push('Debt approaching notional size');
+    }
+
+    const riskLevel: 'critical' | 'warning' | 'healthy' | 'unknown' = (() => {
+      if (healthDecimal) {
+        if (healthDecimal.lessThan(1.05)) {
+          return 'critical';
+        }
+        if (healthDecimal.lessThan(1.2)) {
+          return 'warning';
+        }
+      }
+      if (riskSignals.some((signal) => signal.includes('critical'))) {
+        return 'critical';
+      }
+      if (riskSignals.length > 0) {
+        return 'warning';
+      }
+      return healthDecimal ? 'healthy' : 'unknown';
+    })();
+
+    riskStats[riskLevel] += 1;
+    processedPositions += 1;
+
+    const metadata: Record<string, unknown> = {
+      ...(position.metadata ?? {}),
+      risk: {
+        level: riskLevel,
+        signals: riskSignals,
+        metrics: {
+          utilizationPercent: utilizationDecimal ? Number(utilizationDecimal.toFixed(4)) : null,
+          borrowRateApr: borrowRateDecimal ? Number(borrowRateDecimal.toFixed(4)) : null,
+          debtToNotionalRatio: debtDecimal && !notionalDecimal.isZero()
+            ? Number(debtDecimal.div(notionalDecimal).toFixed(4))
+            : null,
+        },
+      },
+    };
 
     await prisma.gammaswapPosition.upsert({
       where: {
@@ -198,7 +274,7 @@ const priceKeySet = new Set<string>();
         liquidationPrice: liquidationDecimal ?? undefined,
         pnlUsd: pnlDecimal ?? notionalUsd ?? undefined,
         lastSyncAt: new Date(),
-        metadata: (position.metadata as Prisma.InputJsonValue) ?? undefined,
+        metadata: metadata as Prisma.InputJsonValue,
       },
       create: {
         protocolId: protocol.id,
@@ -211,10 +287,14 @@ const priceKeySet = new Set<string>();
         healthRatio: healthDecimal ?? undefined,
         liquidationPrice: liquidationDecimal ?? undefined,
         pnlUsd: pnlDecimal ?? notionalUsd ?? undefined,
-        metadata: (position.metadata as Prisma.InputJsonValue) ?? undefined,
+        metadata: metadata as Prisma.InputJsonValue,
       },
     });
   }
+
+  console.info(
+    `Gammaswap sync processed ${processedPositions} positions (critical: ${riskStats.critical}, warning: ${riskStats.warning}, healthy: ${riskStats.healthy}, unknown: ${riskStats.unknown}).`
+  );
 }
 
 async function main() {
