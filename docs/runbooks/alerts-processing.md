@@ -6,6 +6,8 @@ Use this checklist when validating the alert pipeline (Phase 3a) locally.
 - Postgres running locally (see `docs/runbooks/gammaswap-sync.md`).
 - Prisma schema pushed (`npm run db:push`).
 - Mock Gammaswap data available (default when `GAMMASWAP_API_URL` is unset).
+- Optional: set `SLACK_ALERT_WEBHOOK_URL` in `.env` to test Slack delivery; leave blank to stay console-only.
+- Optional: set `ALERT_CHANNEL_FILTER` or pass `--channels=<list>` when running `process:alerts` to target specific adapters.
 
 ## Steps
 1. Generate alert data:
@@ -13,11 +15,12 @@ Use this checklist when validating the alert pipeline (Phase 3a) locally.
    npm run sync:gammaswap
    npm run process:alerts
    ```
-   The sync populates positions/metrics; the alert processor upserts alerts (status `pending`) and dispatches them through registered delivery adapters.
+   The sync populates positions/metrics; the alert processor upserts alerts (status `pending`) and dispatches them through the active delivery adapters. The CLI prints a per-channel summary at the end of each run.
 2. Inspect alerts via API:
    ```bash
    curl "$NEXT_PUBLIC_API_URL/v1/alerts?status=pending" | jq
    curl "$NEXT_PUBLIC_API_URL/v1/alerts?status=dispatched&channel=console" | jq
+   curl "$NEXT_PUBLIC_API_URL/v1/alerts?status=dispatched&channel=slack&deliveredSince=$(date -u +%Y-%m-%dT%H:%M:%SZ)" | jq
    ```
 3. Acknowledge a critical alert:
    ```bash
@@ -31,5 +34,6 @@ Use this checklist when validating the alert pipeline (Phase 3a) locally.
 ## Notes
 - Without a real Gammaswap feed, alerts are generated from the mock fixture and focus on risk severity logic.
 - The alert processor retries gracefully when token prices fail (e.g., CoinGecko limits) and still persists alerts with available metrics.
-- Delivery adapters are defined in `apps/api/src/jobs/process-alerts.ts` (default: `console`). Additional adapters (Slack, webhook, email) can be added by implementing the interface in `apps/api/src/services/alert-delivery.ts`.
+- Delivery adapters are registered via `createDeliveryAdapters` in `apps/api/src/services/alert-delivery.ts`. The default build includes the console adapter and optionally Slack when `SLACK_ALERT_WEBHOOK_URL` is present.
+- Use `ALERT_CHANNEL_FILTER=console` (or `npm run process:alerts -- --channels=console`) to restrict runs to specific adapters during testing.
 - When wiring additional delivery integrations, extend the `AlertDelivery.channel` enumeration with the integration name (for example `slack`, `email`, or `webhook`).

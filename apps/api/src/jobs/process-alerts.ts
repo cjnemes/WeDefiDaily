@@ -1,10 +1,11 @@
 import crypto from 'node:crypto';
 import Decimal from 'decimal.js';
 import { Prisma, PrismaClient } from '@prisma/client';
+import { env } from '../config';
 import {
   ALERT_WITH_RELATIONS_INCLUDE,
   AlertWithRelations,
-  consoleAlertAdapter,
+  createDeliveryAdapters,
   hasSuccessfulDelivery,
 } from '../services/alert-delivery';
 
@@ -117,10 +118,31 @@ async function upsertAlert(params: {
   return alert;
 }
 
-const DELIVERY_ADAPTERS = [consoleAlertAdapter];
+interface DispatchSummary {
+  alertsProcessed: number;
+  alertsDelivered: number;
+  channelSuccesses: Record<string, number>;
+  channelFailures: Record<string, number>;
+  channelSkipped: Record<string, number>;
+}
 
-async function dispatchPendingAlerts() {
-  if (DELIVERY_ADAPTERS.length === 0) {
+function createEmptySummary(): DispatchSummary {
+  return {
+    alertsProcessed: 0,
+    alertsDelivered: 0,
+    channelSuccesses: {},
+    channelFailures: {},
+    channelSkipped: {},
+  };
+}
+
+function increment(summaryMap: Record<string, number>, channel: string) {
+  summaryMap[channel] = (summaryMap[channel] ?? 0) + 1;
+}
+
+async function dispatchPendingAlerts(adapters: ReturnType<typeof createDeliveryAdapters>, summary: DispatchSummary) {
+  if (adapters.length === 0) {
+    console.warn('No alert delivery adapters configured; skipping dispatch step.');
     return;
   }
 
@@ -132,10 +154,12 @@ async function dispatchPendingAlerts() {
   });
 
   for (const alert of pendingAlerts) {
+    summary.alertsProcessed += 1;
     let delivered = false;
 
-    for (const adapter of DELIVERY_ADAPTERS) {
+    for (const adapter of adapters) {
       if (hasSuccessfulDelivery(alert as AlertWithRelations, adapter.channel)) {
+        increment(summary.channelSkipped, adapter.channel);
         continue;
       }
 
@@ -150,10 +174,15 @@ async function dispatchPendingAlerts() {
             metadata,
           },
         });
+
         if (result.success) {
           delivered = true;
+          increment(summary.channelSuccesses, adapter.channel);
+        } else {
+          increment(summary.channelFailures, adapter.channel);
         }
       } catch (error) {
+        increment(summary.channelFailures, adapter.channel);
         await prisma.alertDelivery.create({
           data: {
             alertId: alert.id,
@@ -169,12 +198,59 @@ async function dispatchPendingAlerts() {
     }
 
     if (delivered) {
+      summary.alertsDelivered += 1;
       await prisma.alert.update({
         where: { id: alert.id },
         data: { status: 'dispatched', updatedAt: now() },
       });
     }
   }
+}
+
+function parseChannelFilterFromArgs(): string[] | undefined {
+  const arg = process.argv.find((value) => value.startsWith('--channel') || value.startsWith('--channels'));
+  if (!arg) {
+    return undefined;
+  }
+
+  const [, raw] = arg.split('=');
+  if (!raw) {
+    return undefined;
+  }
+
+  return raw.split(',').map((value) => value.trim()).filter(Boolean);
+}
+
+function resolveChannelFilter(): string[] | undefined {
+  const cliFilter = parseChannelFilterFromArgs();
+  if (cliFilter && cliFilter.length > 0) {
+    return cliFilter;
+  }
+
+  if (env.ALERT_CHANNEL_FILTER) {
+    return env.ALERT_CHANNEL_FILTER.split(',').map((value) => value.trim()).filter(Boolean);
+  }
+
+  return undefined;
+}
+
+function logDispatchSummary(adapters: ReturnType<typeof createDeliveryAdapters>, summary: DispatchSummary) {
+  if (adapters.length === 0) {
+    return;
+  }
+
+  const channels = adapters.map((adapter) => adapter.channel).join(', ');
+  console.info(`Alert dispatch summary: processed ${summary.alertsProcessed} alerts across channels [${channels}]`);
+
+  adapters.forEach((adapter) => {
+    const channel = adapter.channel;
+    const delivered = summary.channelSuccesses[channel] ?? 0;
+    const failures = summary.channelFailures[channel] ?? 0;
+    const skipped = summary.channelSkipped[channel] ?? 0;
+    console.info(`  ↳ ${channel}: delivered=${delivered} skipped=${skipped} failures=${failures}`);
+  });
+
+  console.info(`Alerts dispatched this run: ${summary.alertsDelivered}`);
 }
 
 async function generateRewardAlerts(activeHashes: Set<string>) {
@@ -394,11 +470,24 @@ async function main() {
   console.info(`Processing alerts at ${now().toISOString()}`);
   const activeHashes = new Set<string>();
 
+  const channelFilter = resolveChannelFilter();
+  if (channelFilter && channelFilter.length > 0) {
+    console.info(`Channel filter applied: ${channelFilter.join(', ')}`);
+  }
+
+  const adapters = createDeliveryAdapters({
+    slackWebhookUrl: env.SLACK_ALERT_WEBHOOK_URL,
+    channelFilter,
+  });
+
+  const summary = createEmptySummary();
+
   await generateRewardAlerts(activeHashes);
   await generateGammaswapAlerts(activeHashes);
   await generateGovernanceAlerts(activeHashes);
-  await dispatchPendingAlerts();
+  await dispatchPendingAlerts(adapters, summary);
   await resolveStaleAlerts(activeHashes);
+  logDispatchSummary(adapters, summary);
 }
 
 main()

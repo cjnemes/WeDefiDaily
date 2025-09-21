@@ -21,6 +21,8 @@ const envSchema = z.object({
   THENA_API_URL: z.string().optional(),
   GOVERNANCE_REFRESH_INTERVAL_MINUTES: z.coerce.number().int().positive().optional(),
   GAMMASWAP_API_URL: z.string().optional(),
+  SLACK_ALERT_WEBHOOK_URL: z.string().url().optional(),
+  ALERT_CHANNEL_FILTER: z.string().optional(),
 });
 
 export const env = envSchema.parse(process.env);
