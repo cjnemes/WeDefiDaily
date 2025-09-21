@@ -41,6 +41,9 @@ function serializeWallet(wallet: WalletWithRelations) {
     address: wallet.address,
     label: wallet.label,
     chainId: wallet.chainId,
+    chainName: wallet.chain.name,
+    chainShortName: wallet.chain.shortName ?? undefined,
+    nativeCurrencySymbol: wallet.chain.nativeCurrencySymbol ?? undefined,
     createdAt: wallet.createdAt.toISOString(),
     updatedAt: wallet.updatedAt.toISOString(),
     chain: {

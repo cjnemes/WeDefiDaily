@@ -18,17 +18,42 @@ async function fetchApi<T>(
     },
   });
 
+  const contentType = response.headers.get('content-type') ?? '';
+  const isJson = contentType.includes('application/json');
+  const hasBody = ![204, 205, 304].includes(response.status);
+  const rawBody = hasBody ? await response.text() : '';
+
   if (!response.ok) {
-    const error = await response.json() as ApiError;
-    throw new Error(error.message || `API error: ${response.statusText}`);
+    if (isJson && rawBody) {
+      let parsedError: ApiError | null = null;
+      try {
+        parsedError = JSON.parse(rawBody) as ApiError;
+      } catch {
+        parsedError = null;
+      }
+
+      if (parsedError) {
+        throw new Error(parsedError.message || `API error: ${response.statusText}`);
+      }
+    }
+
+    const fallbackMessage = rawBody || response.statusText;
+    throw new Error(`API error: ${fallbackMessage}`);
   }
 
-  // Handle 204 No Content and other empty responses
-  if (response.status === 204 || response.headers.get('content-length') === '0') {
-    return {} as T;
+  if (!rawBody) {
+    return undefined as T;
   }
 
-  return response.json() as Promise<T>;
+  if (isJson) {
+    try {
+      return JSON.parse(rawBody) as T;
+    } catch (error) {
+      throw new Error(`Failed to parse API response: ${(error as Error).message}`);
+    }
+  }
+
+  return rawBody as unknown as T;
 }
 
 // Portfolio API
@@ -193,6 +218,12 @@ export interface Wallet {
   nativeCurrencySymbol?: string;
   createdAt?: string;
   updatedAt?: string;
+  chain?: {
+    id: number;
+    name: string;
+    shortName: string | null;
+    nativeCurrencySymbol: string | null;
+  };
 }
 
 export interface WalletsResponse {
@@ -204,30 +235,91 @@ export interface WalletsResponse {
   data: Wallet[];
 }
 
+type WalletApiPayload = Wallet & {
+  chain?: {
+    id: number;
+    name: string;
+    shortName: string | null;
+    nativeCurrencySymbol: string | null;
+  };
+};
+
+function normalizeWalletPayload(payload: WalletApiPayload): Wallet {
+  return {
+    id: payload.id,
+    address: payload.address,
+    chainId: payload.chainId,
+    label: payload.label,
+    chainName: payload.chainName ?? payload.chain?.name ?? undefined,
+    chainShortName: payload.chainShortName ?? payload.chain?.shortName ?? undefined,
+    nativeCurrencySymbol: payload.nativeCurrencySymbol ?? payload.chain?.nativeCurrencySymbol ?? undefined,
+    createdAt: payload.createdAt,
+    updatedAt: payload.updatedAt,
+    chain: payload.chain,
+  };
+}
+
 export function fetchWallets(params?: { limit?: number; offset?: number }) {
   const searchParams = new URLSearchParams();
   if (params?.limit) searchParams.append('limit', params.limit.toString());
   if (params?.offset) searchParams.append('offset', params.offset.toString());
 
   const query = searchParams.toString() ? `?${searchParams.toString()}` : '';
-  return fetchApi<WalletsResponse>(`/v1/wallets${query}`);
+  return fetchApi<{ data: WalletApiPayload[]; meta?: WalletsResponse['meta'] } | WalletApiPayload[]>(`/v1/wallets${query}`)
+    .then((response) => {
+      const payloads = Array.isArray(response)
+        ? response
+        : response.data;
+      const data = payloads.map(normalizeWalletPayload);
+      const limit = params?.limit ?? data.length;
+      const offset = params?.offset ?? 0;
+      const meta = Array.isArray(response) ? undefined : response.meta;
+
+      return {
+        meta: meta ?? {
+          count: data.length,
+          limit,
+          offset,
+        },
+        data,
+      } satisfies WalletsResponse;
+    });
 }
 
 export function fetchWallet(id: string) {
-  return fetchApi<Wallet>(`/v1/wallets/${id}`);
+  return fetchApi<{ data: WalletApiPayload } | WalletApiPayload>(`/v1/wallets/${id}`)
+    .then((response) => {
+      const payload = (typeof response === 'object' && response !== null && 'data' in response)
+        ? (response as { data: WalletApiPayload }).data
+        : (response as WalletApiPayload);
+
+      return normalizeWalletPayload(payload);
+    });
 }
 
 export function createWallet(wallet: Omit<Wallet, 'id' | 'createdAt' | 'updatedAt'>) {
-  return fetchApi<Wallet>('/v1/wallets', {
+  return fetchApi<{ data: WalletApiPayload } | WalletApiPayload>('/v1/wallets', {
     method: 'POST',
     body: JSON.stringify(wallet),
+  }).then((response) => {
+    const payload = (typeof response === 'object' && response !== null && 'data' in response)
+      ? (response as { data: WalletApiPayload }).data
+      : (response as WalletApiPayload);
+
+    return normalizeWalletPayload(payload);
   });
 }
 
 export function updateWallet(id: string, updates: Partial<Omit<Wallet, 'id' | 'createdAt' | 'updatedAt'>>) {
-  return fetchApi<Wallet>(`/v1/wallets/${id}`, {
+  return fetchApi<{ data: WalletApiPayload } | WalletApiPayload>(`/v1/wallets/${id}`, {
     method: 'PUT',
     body: JSON.stringify(updates),
+  }).then((response) => {
+    const payload = (typeof response === 'object' && response !== null && 'data' in response)
+      ? (response as { data: WalletApiPayload }).data
+      : (response as WalletApiPayload);
+
+    return normalizeWalletPayload(payload);
   });
 }
 
