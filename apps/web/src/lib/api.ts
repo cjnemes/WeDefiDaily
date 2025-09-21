@@ -352,6 +352,7 @@ export interface PriceThreshold {
     symbol: string;
     name: string;
     decimals: number;
+    chainId?: number;
   };
 }
 
@@ -408,4 +409,41 @@ export function deletePriceThreshold(id: string) {
   return fetchApi<void>(`/v1/price-thresholds/${id}`, {
     method: 'DELETE',
   });
+}
+
+// Tokens API
+export interface TokenSummary {
+  id: string;
+  chainId: number;
+  address: string;
+  symbol: string;
+  name: string;
+  decimals: number;
+  isNative: boolean;
+  chain?: {
+    id: number;
+    name: string;
+    shortName: string | null;
+  } | null;
+}
+
+export interface TokenSearchResponse {
+  meta: {
+    count: number;
+    generatedAt: string;
+  };
+  data: TokenSummary[];
+}
+
+export function searchTokens(params: { search?: string; limit?: number }) {
+  const searchParams = new URLSearchParams();
+  if (params.search) {
+    searchParams.append('search', params.search);
+  }
+  if (params.limit) {
+    searchParams.append('limit', params.limit.toString());
+  }
+
+  const query = searchParams.toString() ? `?${searchParams.toString()}` : '';
+  return fetchApi<TokenSearchResponse>(`/v1/tokens${query}`);
 }

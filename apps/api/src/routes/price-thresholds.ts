@@ -4,17 +4,29 @@ import Decimal from 'decimal.js';
 import { Prisma } from '@prisma/client';
 
 // Type for PriceThreshold with includes
-type PriceThresholdWithRelations = Prisma.PriceThresholdGetPayload<{
-  include: {
-    wallet: true;
-    token: true;
-  };
-}>;
-
 const priceThresholdInclude = {
-  wallet: true,
-  token: true,
+  wallet: {
+    select: {
+      id: true,
+      address: true,
+      label: true,
+      chainId: true,
+    },
+  },
+  token: {
+    select: {
+      id: true,
+      symbol: true,
+      name: true,
+      decimals: true,
+      chainId: true,
+    },
+  },
 } satisfies Prisma.PriceThresholdInclude;
+
+type PriceThresholdWithRelations = Prisma.PriceThresholdGetPayload<{
+  include: typeof priceThresholdInclude;
+}>;
 
 const JsonInputSchema = z.unknown().optional();
 
@@ -64,7 +76,8 @@ function serializePriceThreshold(threshold: PriceThresholdWithRelations) {
         id: threshold.token.id,
         symbol: threshold.token.symbol,
         name: threshold.token.name,
-        decimals: threshold.token.decimals
+        decimals: threshold.token.decimals,
+        chainId: threshold.token.chainId,
       }
     })
   };

@@ -14,8 +14,8 @@ Map each roadmap bullet to a GitHub issue so progress and reviews stay traceable
 | Phase 3a | Daily digest content + channels | [#18](https://github.com/cjnemes/WeDefiDaily/issues/18) | ✅ Done (closed) |
 | Phase 3a | Core infrastructure delivery | [PR #22](https://github.com/cjnemes/WeDefiDaily/pull/22) | 🔄 Under review |
 | Phase 3a | External delivery channels (Telegram, Email) | [#23](https://github.com/cjnemes/WeDefiDaily/issues/23) | ⏳ Upcoming |
-| Phase 3b | Governance dashboard polish | [#25](https://github.com/cjnemes/WeDefiDaily/issues/25) | 📝 Open |
-| Phase 3b | Price watchlist polish | [#26](https://github.com/cjnemes/WeDefiDaily/issues/26) | 📝 Open |
+| Phase 3b | Governance dashboard polish | [#25](https://github.com/cjnemes/WeDefiDaily/issues/25) | ✅ Done (merged PR #29) |
+| Phase 3b | Price watchlist polish | [#26](https://github.com/cjnemes/WeDefiDaily/issues/26) | 🚧 In progress |
 | Phase 3b | Advanced UX enhancements | [#19](https://github.com/cjnemes/WeDefiDaily/issues/19) | 🔄 Under review (PR #24) |
 | Phase 4 | Intelligence experiments | [#20](https://github.com/cjnemes/WeDefiDaily/issues/20) | 📝 Backlog |
 
