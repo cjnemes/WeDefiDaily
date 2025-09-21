@@ -368,17 +368,21 @@ async function generateGovernanceAlerts(activeHashes: Set<string>) {
 }
 
 async function resolveStaleAlerts(activeHashes: Set<string>) {
-  if (activeHashes.size === 0) {
-    return;
-  }
+  // Always check for stale alerts, even when no active hashes exist
+  // This ensures previously pending alerts get resolved when conditions change
+  const whereClause = activeHashes.size > 0
+    ? {
+        status: 'pending' as const,
+        contextHash: {
+          notIn: Array.from(activeHashes),
+        },
+      }
+    : {
+        status: 'pending' as const,
+      };
 
   await prisma.alert.updateMany({
-    where: {
-      status: 'pending',
-      contextHash: {
-        notIn: Array.from(activeHashes),
-      },
-    },
+    where: whereClause,
     data: {
       status: 'resolved',
       updatedAt: now(),

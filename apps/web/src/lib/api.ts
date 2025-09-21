@@ -23,6 +23,11 @@ async function fetchApi<T>(
     throw new Error(error.message || `API error: ${response.statusText}`);
   }
 
+  // Handle 204 No Content and other empty responses
+  if (response.status === 204 || response.headers.get('content-length') === '0') {
+    return {} as T;
+  }
+
   return response.json() as Promise<T>;
 }
 
