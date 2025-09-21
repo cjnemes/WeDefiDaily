@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ES2021",
     "module": "CommonJS",
-    "lib": ["ES2021"],
+    "lib": ["ES2021", "DOM"],
     "outDir": "dist",
     "rootDir": "src",
     "strict": true,
@@ -10,7 +10,7 @@
     "skipLibCheck": true,
     "moduleResolution": "node",
     "resolveJsonModule": true,
-    "types": ["node"],
+    "types": ["node", "vitest/globals"],
     "forceConsistentCasingInFileNames": true
   },
   "include": ["src"],

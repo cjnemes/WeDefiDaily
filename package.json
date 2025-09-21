@@ -9,7 +9,20 @@
     "build": "npm run build --workspace @wedefidaily/web && npm run build --workspace @wedefidaily/api",
     "lint": "npm run lint --workspace @wedefidaily/web && npm run lint --workspace @wedefidaily/api",
     "format": "npm run format --workspace @wedefidaily/web",
-    "typecheck": "npm run typecheck --workspace @wedefidaily/web && npm run typecheck --workspace @wedefidaily/api"
+    "typecheck": "npm run typecheck --workspace @wedefidaily/web && npm run typecheck --workspace @wedefidaily/api",
+    "db:generate": "npm run prisma:generate --workspace @wedefidaily/api",
+    "db:push": "npm run prisma:db:push --workspace @wedefidaily/api",
+    "db:migrate:dev": "npm run prisma:migrate:dev --workspace @wedefidaily/api",
+    "db:migrate:deploy": "npm run prisma:migrate:deploy --workspace @wedefidaily/api",
+    "db:studio": "npm run prisma:studio --workspace @wedefidaily/api",
+    "db:validate": "npm run prisma:validate --workspace @wedefidaily/api",
+    "sync:balances": "npm run sync:balances --workspace @wedefidaily/api",
+    "sync:governance": "npm run sync:governance --workspace @wedefidaily/api",
+    "sync:rewards": "npm run sync:rewards --workspace @wedefidaily/api",
+    "sync:gammaswap": "npm run sync:gammaswap --workspace @wedefidaily/api",
+    "process:alerts": "npm run process:alerts --workspace @wedefidaily/api",
+    "generate:digest": "npm run generate:digest --workspace @wedefidaily/api",
+    "check:price-thresholds": "npm run check:price-thresholds --workspace @wedefidaily/api"
   },
   "workspaces": [
     "apps/web",
@@ -20,5 +33,8 @@
   },
   "keywords": [],
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "dotenv-cli": "^10.0.0"
+  }
 }

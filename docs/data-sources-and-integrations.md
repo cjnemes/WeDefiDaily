@@ -5,6 +5,7 @@
   - Use for RPC read access on Base and Ethereum (supports historical state, logs, trace APIs).
   - Consider dedicated app keys per environment (dev, prod) to isolate quota usage.
   - Employ WebSockets for subscription-based updates (new blocks, pending transactions) powering live alerts.
+  - `alchemy_getTokenBalances`, `alchemy_getTokenMetadata`, and `eth_getBalance` power the portfolio sync job.
 
 ## On-Chain Data APIs
 - **Etherscan v2 API**
@@ -24,22 +25,30 @@
   - Redundant price feed and supplemental data (categories, developer stats, social metrics).
   - Useful for long-tail tokens not covered robustly by CMC.
   - Watch monthly call limits; implement backoff and caching.
+  - `simple/token_price/{platform}` and `simple/price` endpoints populate `PriceSnapshot` rows and USD valuations.
 
 ## Protocol-Specific Data
 - **Aerodrome Finance**
   - Primary sources: Subgraph (The Graph) for gauges, bribes, and vote weights; direct contract calls for vote/lock data.
   - Additional: Community APIs (e.g., Aerodrome analytics endpoints) if rate limits acceptable.
   - Store epoch schedules and gauge metadata in configuration files for quick reference.
+  - Locks endpoint (`/locks?address=0x...`) and bribe feed (`/bribes`) populate governance tables.
+  - Reward feed endpoints (`/rewards?address=0x...`) power the claim tracker (placeholder until official APIs exposed).
 
 - **Gammaswap**
-  - Check for published subgraph or API; otherwise rely on contract calls via Alchemy.
-  - Requires understanding of pool-specific data structures (liquidity, borrow rates, health factors).
-  - Build helper library to decode custom events and positions.
+  - Check for published API/subgraph; fallback to on-chain contract calls via Base RPC.
+  - Capture pool metrics (utilization, rates) and per-wallet positions with health ratios.
+  - `sync-gammaswap` job stores snapshots for dashboard risk analysis.
+  - Configure `GAMMASWAP_API_URL` to point at the wallet positions endpoint (supports `{walletAddress}` templating). Returns pools + positions consumed by the adapter.
+  - Risk heuristics flag high utilization (>90%), elevated borrow APR (>45%), and debt close to notional; signals surface in `/v1/gammaswap` responses and dashboard badges.
+  - When no external endpoint is configured, the service falls back to a local mock dataset for development. The mock injects representative pools/positions so alerting and UI flows can be validated before wiring a real feed.
 
 - **veTHE (BSC)**
   - Identify official contract addresses (likely via Thena Finance or partner project).
   - Use BscScan (via Etherscan API compatibility) for token balances and lock metadata.
   - Consider direct contract interactions for vote snapshots and rewards.
+  - Companion API (`/locks`, `/bribes`) hydrates governance lock and bribe tables alongside Aerodrome.
+  - Reward metrics rely on Thena emissions endpoints when available; gas estimates from BscScan.
 
 ## Off-Chain Storage & Processing
 - Choose a document database (e.g., MongoDB Atlas) or lightweight PostgreSQL instance for caching positions, price history, and alerts.

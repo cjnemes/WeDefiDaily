@@ -7,14 +7,32 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only --ignore-watch node_modules src/index.ts",
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.build.json",
     "start": "node dist/index.js",
     "lint": "eslint \"src/**/*.ts\"",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "prisma:generate": "prisma generate",
+    "prisma:db:push": "dotenv -e ../../.env -- prisma db push",
+    "prisma:migrate:dev": "dotenv -e ../../.env -- prisma migrate dev",
+    "prisma:migrate:deploy": "dotenv -e ../../.env -- prisma migrate deploy",
+    "prisma:studio": "dotenv -e ../../.env -- prisma studio",
+    "prisma:validate": "dotenv -e ../../.env.example -- prisma validate",
+    "sync:balances": "dotenv -e ../../.env -- tsx src/jobs/sync-balances.ts",
+    "sync:governance": "dotenv -e ../../.env -- tsx src/jobs/sync-governance.ts",
+    "sync:rewards": "dotenv -e ../../.env -- tsx src/jobs/sync-rewards.ts",
+    "sync:gammaswap": "dotenv -e ../../.env -- tsx src/jobs/sync-gammaswap.ts",
+    "process:alerts": "dotenv -e ../../.env -- tsx src/jobs/process-alerts.ts",
+    "generate:digest": "dotenv -e ../../.env -- tsx src/jobs/generate-digest.ts",
+    "check:price-thresholds": "dotenv -e ../../.env -- tsx src/jobs/check-price-thresholds.ts"
   },
   "dependencies": {
     "@fastify/cors": "^10.0.1",
+    "@prisma/client": "^6.16.2",
+    "decimal.js": "^10.4.3",
     "fastify": "^5.1.0",
+    "fastify-plugin": "^5.0.1",
     "zod": "^3.23.8"
   },
   "devDependencies": {
@@ -24,8 +42,11 @@
     "@typescript-eslint/parser": "^8.44.0",
     "eslint": "^9.13.0",
     "globals": "^15.9.0",
+    "prisma": "^6.0.1",
     "ts-node-dev": "^2.0.0",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.6.3"
+    "tsx": "^4.20.5",
+    "typescript": "^5.6.3",
+    "vitest": "^3.2.4"
   }
 }
