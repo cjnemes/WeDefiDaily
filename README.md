@@ -37,9 +37,14 @@ Personal DeFi command center focused on Base-native incentives, ve-token governa
 - Gammaswap position sync and risk analytics (`npm run sync:gammaswap`).
 
 ## Next Steps
-- Add alerting pipelines (claims due, epoch countdowns, gas advisories).
-- Integrate trade execution helpers and CLI digest exports.
-- Expand protocol coverage per `docs/roadmap.md`.
+- Phase 2b: finalize reward adapters and `/v1/rewards` gas-aware outputs, then surface an Action Required panel in the UI.
+- Phase 2c: complete Gammaswap ingestion for LP/borrow health, including risk heuristics and documentation updates.
+- Phase 3a: introduce alerting + daily digest workflows before pursuing the advanced UX/analytics roadmap in `docs/roadmap.md`.
+
+## Project Management
+- Follow `docs/project-management.md` for issue templates, roadmap labels, and PR checklists to keep GitHub history clean and traceable.
+- Use the runbook at `docs/runbooks/gammaswap-sync.md` when refreshing Gammaswap data, attaching logs to the matching roadmap issue.
+- Keep `docs/roadmap-issue-tracker.md` up to date so every roadmap bullet is backed by a GitHub ticket.
 
 ## API Surface (current)
 
@@ -63,6 +68,8 @@ Personal DeFi command center focused on Base-native incentives, ve-token governa
 - `GET /v1/governance` – surfaces governance locks, bribe leaderboard, and upcoming epochs.
 - `GET /v1/rewards` – returns claimable rewards with gas-adjusted profitability metrics.
 - `GET /v1/gammaswap` – lists LP/borrow positions with health ratios and risk flags.
+- `GET /v1/alerts` – retrieves generated alerts with filtering by status, type, and severity.
+- `GET /v1/price-thresholds` – manages price monitoring thresholds for automated alerts.
 
 ## Useful Commands
 
@@ -73,3 +80,7 @@ Personal DeFi command center focused on Base-native incentives, ve-token governa
 - `npm run sync:governance` – ingest Aerodrome/Thena vote escrow data and bribe markets.
 - `npm run sync:rewards` – populate reward opportunities and ROI metrics for supported protocols.
 - `npm run sync:gammaswap` – hydrate Gammaswap pool/position data and compute risk metrics.
+  - Without a `GAMMASWAP_API_URL`, the job loads a local mock dataset so alerts and UI flows remain testable.
+- `npm run process:alerts` – evaluate reward, governance, and Gammaswap signals to upsert alerts and log deliveries.
+- `npm run generate:digest` – create daily digest in Markdown and CSV formats summarizing portfolio, governance, and alerts.
+- `npm run check:price-thresholds` – monitor configured price thresholds and generate alerts when triggered.

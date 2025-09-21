@@ -1,0 +1,108 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project Overview
+
+WeDefiDaily is a personal DeFi command center focused on Base-native incentives, ve-token governance, and multi-chain portfolio tracking. It's a TypeScript monorepo with:
+- `apps/api` - Fastify-based API gateway with Prisma ORM
+- `apps/web` - Next.js frontend with Tailwind CSS v4
+- `docs/` - Project documentation and runbooks
+
+## Development Commands
+
+### Setup & Database
+```bash
+npm install                    # Install all dependencies
+docker compose up -d postgres  # Start PostgreSQL
+npm run db:push               # Push Prisma schema to database
+npm run db:generate           # Generate Prisma client
+npm run db:studio            # Open Prisma Studio
+```
+
+### Development
+```bash
+npm run dev:api              # Start API server (port 4000)
+npm run dev:web              # Start web server (port 3000)
+npm run build                # Build both workspaces
+```
+
+### Quality Checks
+```bash
+npm run lint                 # Lint both workspaces
+npm run typecheck           # TypeScript type checking
+npm run db:validate         # Validate Prisma schema
+```
+
+### Data Sync Jobs
+```bash
+npm run sync:balances           # Sync wallet balances via Alchemy + CoinGecko
+npm run sync:governance         # Sync Aerodrome/Thena vote escrow data
+npm run sync:rewards            # Sync claimable rewards across protocols
+npm run sync:gammaswap          # Sync Gammaswap positions and risk metrics
+npm run process:alerts          # Process alerts based on synced data
+npm run generate:digest         # Generate daily digest (Markdown + CSV)
+npm run check:price-thresholds  # Check price thresholds and generate alerts
+```
+
+### Testing
+```bash
+npm run test --workspace @wedefidaily/api      # Run API tests with Vitest
+npm run test:run --workspace @wedefidaily/api  # Run tests once
+```
+
+## Architecture
+
+### Core Modules
+1. **Portfolio Engine** (`apps/api/src/services/`) - Aggregates wallet balances and positions across chains
+2. **Vote Analytics** - Aerodrome/veTHE governance integration for bribe optimization
+3. **Rewards Tracker** - Multi-protocol reward opportunity tracking with gas efficiency
+4. **Alert Dispatcher** - Converts triggers into notifications
+5. **Gammaswap Integration** - LP/borrow position risk analytics
+
+### Data Flow
+- Sync jobs ingest data via external APIs (Alchemy, CoinGecko, protocol APIs)
+- Prisma ORM persists normalized data to PostgreSQL
+- Fastify API exposes endpoints for frontend consumption
+- Alert processing evaluates conditions and logs notifications
+
+### Key Services
+- **Alchemy Service** (`apps/api/src/services/alchemy.ts`) - On-chain balance fetching
+- **CoinGecko Service** (`apps/api/src/services/coingecko.ts`) - Price data enrichment
+- **Governance Service** (`apps/api/src/services/governance.ts`) - ve-token analytics
+- **Rewards Service** (`apps/api/src/services/rewards.ts`) - Cross-protocol reward aggregation
+- **Gammaswap Service** (`apps/api/src/services/gammaswap.ts`) - Position risk assessment
+
+## API Endpoints
+
+- `GET /health` - Service health check with database connectivity
+- `GET /v1/wallets` - List tracked wallets with pagination
+- `POST /v1/wallets` - Create/update wallet entries
+- `GET /v1/portfolio` - Aggregate portfolio balances and USD values
+- `GET /v1/governance` - Governance locks and bribe leaderboard
+- `GET /v1/rewards` - Claimable rewards with gas-adjusted profitability
+- `GET /v1/gammaswap` - LP/borrow positions with health ratios
+- `GET /v1/alerts` - Generated alerts with filtering by status/type/severity
+- `GET /v1/price-thresholds` - Price monitoring thresholds for automated alerts
+
+## Project Management
+
+- Follow `docs/project-management.md` for issue templates and PR checklists
+- Use roadmap deliverable issue template for all roadmap items
+- Branch naming: `feature/<roadmap-id>/<description>`
+- Update `docs/roadmap-issue-tracker.md` when opening/closing issues
+- Include evidence (logs, screenshots) in PRs and link back to issues
+
+## Environment Setup
+
+Copy `.env.example` to `.env` and configure:
+- Database connection for PostgreSQL
+- API keys for Alchemy, CoinGecko, protocol integrations
+- Without API keys, jobs will use mock data for development
+
+## Testing Strategy
+
+- Unit tests with Vitest for service modules
+- Mock services available (e.g., `gammaswap-mock.ts`) for testing without API dependencies
+- Integration tests validate full data sync workflows
+- CI runs lint, typecheck, and Prisma validation on all PRs

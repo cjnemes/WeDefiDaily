@@ -131,6 +131,8 @@ interface RewardsResponse {
   };
 }
 
+type RewardOpportunity = RewardsResponse['data']['opportunities'][number];
+
 interface GammaswapResponse {
   meta: {
     count: number;
@@ -159,6 +161,7 @@ interface GammaswapResponse {
       pnlUsd: string | null;
       lastSyncAt: string;
       riskLevel: 'critical' | 'warning' | 'healthy' | 'unknown';
+      riskSignals: string[];
     }>;
   };
 }
@@ -323,15 +326,52 @@ export default async function Home() {
     (epoch) => new Date(epoch.startsAt).getTime() > Date.now()
   );
   const topBribes = (governance?.data.bribes ?? []).slice(0, 4);
+
   const rewardOpportunities = rewards?.data.opportunities ?? [];
-  const topOpportunities = rewardOpportunities.slice(0, 4);
-  const totalRewardUsdValue = rewardOpportunities.reduce((acc, reward) => {
-    const usd = Number(reward.netValueUsd ?? reward.usdValue ?? '0');
-    return Number.isFinite(usd) ? acc + usd : acc;
-  }, 0);
+  const toNetUsd = (opportunity: RewardOpportunity) => {
+    const net = Number(opportunity.netValueUsd ?? opportunity.usdValue ?? '0');
+    return Number.isFinite(net) ? net : 0;
+  };
+  const actionableRewards = rewardOpportunities.filter((opportunity) => toNetUsd(opportunity) > 0);
+  const now = Date.now();
+  const dueSoonThresholdMs = 1000 * 60 * 60 * 72;
+  const deadlineStatus = (opportunity: RewardOpportunity) => {
+    if (!opportunity.claimDeadline) return 0;
+    const deadlineTime = new Date(opportunity.claimDeadline).getTime();
+    if (!Number.isFinite(deadlineTime)) return 0;
+    if (deadlineTime < now) return 2;
+    if (deadlineTime - now <= dueSoonThresholdMs) return 1;
+    return 0;
+  };
+  const prioritizedRewards = [...actionableRewards].sort((a, b) => {
+    const weightDiff = deadlineStatus(b) - deadlineStatus(a);
+    if (weightDiff !== 0) {
+      return weightDiff;
+    }
+    return toNetUsd(b) - toNetUsd(a);
+  });
+  const highlightedOpportunities = prioritizedRewards.slice(0, 4);
+  const totalRewardUsdValue = actionableRewards.reduce((acc, opportunity) => acc + toNetUsd(opportunity), 0);
   const totalRewardUsdString = Number.isFinite(totalRewardUsdValue)
     ? totalRewardUsdValue.toString()
     : undefined;
+  const overdueRewards = actionableRewards.filter((opportunity) => deadlineStatus(opportunity) === 2);
+  const upcomingRewards = actionableRewards.filter((opportunity) => deadlineStatus(opportunity) === 1);
+  const noDeadlineRewards = actionableRewards.filter((opportunity) => !opportunity.claimDeadline);
+  const checklistOrder = [...overdueRewards, ...upcomingRewards, ...prioritizedRewards];
+  const seen = new Set<string>();
+  const claimChecklist = checklistOrder.filter((opportunity) => {
+    if (seen.has(opportunity.id)) {
+      return false;
+    }
+    seen.add(opportunity.id);
+    return true;
+  });
+
+  const overdueCount = overdueRewards.length;
+  const upcomingCount = upcomingRewards.length;
+  const noDeadlineCount = noDeadlineRewards.length;
+  const actionableCount = actionableRewards.length;
   const gammaswapPositions = gammaswap?.data.positions ?? [];
   const riskyGammaswapPositions = gammaswapPositions.filter((position) => position.riskLevel !== 'healthy');
 
@@ -459,73 +499,168 @@ export default async function Home() {
           </div>
         </section>
 
-        <section className="grid gap-4 rounded-2xl border border-foreground/10 bg-foreground/5 p-6">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="text-xs uppercase tracking-[0.24em] text-foreground/50">
-                Claimable Rewards
-              </p>
+        <section className="grid gap-5 rounded-2xl border border-foreground/10 bg-foreground/5 p-6">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div className="space-y-1">
+              <p className="text-xs uppercase tracking-[0.24em] text-foreground/50">Action Required</p>
               <p className="text-2xl font-semibold text-foreground">
                 {formatCurrency(totalRewardUsdString)}
               </p>
+              <p className="text-sm text-foreground/70">
+                Net value across {actionableCount} claimable {actionableCount === 1 ? 'opportunity' : 'opportunities'}.
+              </p>
             </div>
-            <div className="space-y-1 text-sm text-foreground/70">
-              <p>
-                Prioritize opportunities where net value exceeds gas; values update each governance sync.
-              </p>
-              <p>
-                Run <code className="rounded bg-foreground/10 px-1 py-0.5">npm run sync:rewards</code> to refresh now.
-              </p>
+            <div className="flex flex-wrap gap-2 text-xs font-medium">
+              {overdueCount > 0 && (
+                <span className="inline-flex items-center gap-2 rounded-full bg-red-500/10 px-3 py-1 text-red-500">
+                  <span className="h-2 w-2 rounded-full bg-red-500" />
+                  {overdueCount} overdue
+                </span>
+              )}
+              {upcomingCount > 0 && (
+                <span className="inline-flex items-center gap-2 rounded-full bg-amber-500/10 px-3 py-1 text-amber-500">
+                  <span className="h-2 w-2 rounded-full bg-amber-500" />
+                  {upcomingCount} due soon
+                </span>
+              )}
+              {noDeadlineCount > 0 && (
+                <span className="inline-flex items-center gap-2 rounded-full bg-foreground/10 px-3 py-1 text-foreground/70">
+                  <span className="h-2 w-2 rounded-full bg-foreground/40" />
+                  {noDeadlineCount} flexible
+                </span>
+              )}
+              {actionableCount === 0 && (
+                <span className="inline-flex items-center gap-2 rounded-full bg-foreground/10 px-3 py-1 text-foreground/60">
+                  <span className="h-2 w-2 rounded-full bg-foreground/30" />
+                  Up to date
+                </span>
+              )}
             </div>
           </div>
 
-          {topOpportunities.length === 0 ? (
+          <div className="text-sm text-foreground/70">
+            <p>
+              Run <code className="rounded bg-foreground/10 px-1 py-0.5">npm run sync:rewards</code> once emissions land or epochs roll.
+              The checklist prioritizes overdue claims, then deadlines inside 72 hours.
+            </p>
+          </div>
+
+          {highlightedOpportunities.length === 0 ? (
             <div className="rounded-xl border border-dashed border-foreground/15 bg-background/40 px-4 py-6 text-center text-sm text-foreground/60">
-              No pending rewards detected. Trigger the reward sync once emissions accrue.
+              All clear. Once rewards accrue, rerun the sync job to populate actionable claims.
             </div>
           ) : (
-            <div className="grid gap-3 md:grid-cols-2">
-              {topOpportunities.map((opportunity) => {
-                const netValue = formatCurrency(opportunity.netValueUsd ?? undefined, '—');
-                const gasValue = formatCurrency(opportunity.gasEstimateUsd ?? undefined, '—');
-                const deadline = opportunity.claimDeadline
-                  ? formatCountdown(new Date(opportunity.claimDeadline))
-                  : '—';
+            <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
+              <div className="grid gap-3 sm:grid-cols-2">
+                {highlightedOpportunities.map((opportunity) => {
+                  const netValue = formatCurrency(opportunity.netValueUsd ?? undefined, '—');
+                  const gasValue = formatCurrency(opportunity.gasEstimateUsd ?? undefined, '—');
+                  const roi = formatPercentage(opportunity.roiAfterGas);
+                  const deadlineDate = opportunity.claimDeadline ? new Date(opportunity.claimDeadline) : null;
+                  const deadlineCountdown = deadlineDate ? formatCountdown(deadlineDate) : '—';
+                  const deadlineBadge = (() => {
+                    if (!deadlineDate) {
+                      return { label: 'Flexible', tone: 'text-foreground/60' };
+                    }
+                    if (deadlineDate.getTime() < now) {
+                      return { label: 'Overdue', tone: 'text-red-500' };
+                    }
+                    if (deadlineDate.getTime() - now <= dueSoonThresholdMs) {
+                      return { label: 'Due soon', tone: 'text-amber-500' };
+                    }
+                    return { label: 'Upcoming', tone: 'text-emerald-500' };
+                  })();
 
-                return (
-                  <div
-                    key={opportunity.id}
-                    className="flex flex-col gap-2 rounded-xl border border-foreground/10 bg-background/40 px-4 py-3 text-sm"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold text-foreground">{opportunity.protocol.name}</span>
-                      <span className="text-foreground/60 text-xs">
-                        {opportunity.contextLabel ?? opportunity.token.symbol}
-                      </span>
+                  return (
+                    <div
+                      key={opportunity.id}
+                      className="flex flex-col gap-2 rounded-xl border border-foreground/10 bg-background/40 px-4 py-3 text-sm"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-foreground">{opportunity.protocol.name}</span>
+                        <span className="text-foreground/60 text-xs">
+                          {opportunity.contextLabel ?? opportunity.token.symbol}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className={`font-medium ${deadlineBadge.tone}`}>{deadlineBadge.label}</span>
+                        <span className="text-foreground/50">{deadlineCountdown}</span>
+                      </div>
+                      <div className="flex justify-between text-foreground/70">
+                        <span>Amount</span>
+                        <span>
+                          {formatQuantity(opportunity.amount)} {opportunity.token.symbol}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-foreground/70">
+                        <span>Net Value</span>
+                        <span>{netValue}</span>
+                      </div>
+                      <div className="flex justify-between text-foreground/70">
+                        <span>Gas</span>
+                        <span>{gasValue}</span>
+                      </div>
+                      <div className="flex justify-between text-foreground/70">
+                        <span>ROI After Gas</span>
+                        <span>{roi}</span>
+                      </div>
                     </div>
-                    <div className="flex justify-between text-foreground/70">
-                      <span>Amount</span>
-                      <span>{formatQuantity(opportunity.amount)} {opportunity.token.symbol}</span>
-                    </div>
-                    <div className="flex justify-between text-foreground/70">
-                      <span>Net Value</span>
-                      <span>{netValue}</span>
-                    </div>
-                    <div className="flex justify-between text-foreground/70">
-                      <span>Gas</span>
-                      <span>{gasValue}</span>
-                    </div>
-                    <div className="flex justify-between text-foreground/70">
-                      <span>Deadline</span>
-                      <span>{deadline}</span>
-                    </div>
-                    <div className="flex justify-between text-foreground/70">
-                      <span>ROI After Gas</span>
-                      <span>{formatPercentage(opportunity.roiAfterGas)}</span>
-                    </div>
+                  );
+                })}
+              </div>
+              <div className="flex flex-col gap-3 rounded-xl border border-foreground/10 bg-background/40 p-4 text-sm">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Claim Checklist</p>
+                  <p className="text-xs text-foreground/60">Sorted by urgency and net return.</p>
+                </div>
+                {claimChecklist.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-foreground/15 bg-background/40 px-3 py-4 text-center text-xs text-foreground/60">
+                    Nothing queued. Monitor after the next sync.
                   </div>
-                );
-              })}
+                ) : (
+                  <ol className="flex flex-col gap-3 text-xs">
+                    {claimChecklist.slice(0, 6).map((opportunity) => {
+                      const netValue = formatCurrency(opportunity.netValueUsd ?? undefined, '—');
+                      const deadlineDate = opportunity.claimDeadline ? new Date(opportunity.claimDeadline) : null;
+                      const badge = (() => {
+                        if (!deadlineDate) {
+                          return { label: 'Flexible', tone: 'text-foreground/60' };
+                        }
+                        if (deadlineDate.getTime() < now) {
+                          return { label: 'Overdue', tone: 'text-red-500' };
+                        }
+                        if (deadlineDate.getTime() - now <= dueSoonThresholdMs) {
+                          return { label: 'Due soon', tone: 'text-amber-500' };
+                        }
+                        return { label: 'Upcoming', tone: 'text-emerald-500' };
+                      })();
+                      const countdown = deadlineDate ? formatCountdown(deadlineDate) : '—';
+
+                      return (
+                        <li
+                          key={`checklist-${opportunity.id}`}
+                          className="flex flex-col gap-1 rounded-lg border border-foreground/10 bg-background/20 px-3 py-2"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium text-foreground">
+                              {opportunity.protocol.name} · {opportunity.token.symbol}
+                            </span>
+                            <span className={`text-[0.65rem] font-medium ${badge.tone}`}>{badge.label}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-foreground/60">
+                            <span>{opportunity.contextLabel ?? shortenAddress(opportunity.wallet.address)}</span>
+                            <span>{countdown}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-foreground/70">
+                            <span>Net</span>
+                            <span>{netValue}</span>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                )}
+              </div>
             </div>
           )}
         </section>
@@ -684,6 +819,13 @@ export default async function Home() {
                       <span>Supply APR</span>
                       <span>{supplyApr}</span>
                     </div>
+                    {position.riskSignals.length > 0 && (
+                      <ul className="mt-1 flex flex-col gap-1 text-xs text-foreground/60">
+                        {position.riskSignals.slice(0, 3).map((signal) => (
+                          <li key={`${position.id}-${signal}`}>• {signal}</li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
                 );
               })}

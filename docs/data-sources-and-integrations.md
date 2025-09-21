@@ -39,6 +39,9 @@
   - Check for published API/subgraph; fallback to on-chain contract calls via Base RPC.
   - Capture pool metrics (utilization, rates) and per-wallet positions with health ratios.
   - `sync-gammaswap` job stores snapshots for dashboard risk analysis.
+  - Configure `GAMMASWAP_API_URL` to point at the wallet positions endpoint (supports `{walletAddress}` templating). Returns pools + positions consumed by the adapter.
+  - Risk heuristics flag high utilization (>90%), elevated borrow APR (>45%), and debt close to notional; signals surface in `/v1/gammaswap` responses and dashboard badges.
+  - When no external endpoint is configured, the service falls back to a local mock dataset for development. The mock injects representative pools/positions so alerting and UI flows can be validated before wiring a real feed.
 
 - **veTHE (BSC)**
   - Identify official contract addresses (likely via Thena Finance or partner project).

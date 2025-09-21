@@ -1,0 +1,100 @@
+name: Roadmap Deliverable
+description: Track and deliver a roadmap milestone item
+labels:
+  - needs-triage
+assignees: []
+title: "[Phase ?] <Concise summary>"
+body:
+  - type: dropdown
+    id: phase
+    attributes:
+      label: Roadmap Phase
+      description: Select the roadmap bucket this task supports (see `docs/roadmap.md`).
+      options:
+        - Phase 0 – Foundations
+        - Phase 1 – Core Data Infrastructure
+        - Phase 2a – Protocol Modules (Aerodrome/veTHE)
+        - Phase 2b – Yield & Claim Tracker
+        - Phase 2c – Gammaswap Integration
+        - Phase 3a – Alerting & Digest
+        - Phase 3b – Advanced UX Enhancements
+        - Phase 4 – Intelligence
+        - Enabler / Ongoing
+    validations:
+      required: true
+  - type: checkboxes
+    id: workstream
+    attributes:
+      label: Workstreams Impacted
+      options:
+        - label: Backend / API
+        - label: Frontend / Web
+        - label: Data / Sync Jobs
+        - label: DevOps / Infrastructure
+        - label: Documentation / Runbooks
+  - type: textarea
+    id: context
+    attributes:
+      label: Background & Goals
+      description: Provide links to roadmap sections, user stories, or prior discussions.
+      placeholder: "- Problem / opportunity\n- Success metrics\n- Related docs"
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope Definition
+      description: Clarify what is in/out of scope for this deliverable.
+      value: "**In Scope**\n- \n- \n\n**Out of Scope**\n- \n- "
+  - type: textarea
+    id: deliverables
+    attributes:
+      label: Acceptance Criteria
+      description: Translate roadmap bullets into concrete, testable outcomes.
+      value: "- [ ] Feature/API behaviour complete\n- [ ] Telemetry or metrics instrumented (if applicable)\n- [ ] Docs/runbooks updated\n- [ ] Demo evidence posted"
+  - type: textarea
+    id: implementation_plan
+    attributes:
+      label: Implementation Plan
+      description: Break the work into ordered tasks. Reference sub-issues/PRs if needed.
+      placeholder: "1. ...\n2. ...\n3. ..."
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation & Testing Strategy
+      description: Outline automated tests, manual steps, and data required to verify the change.
+      value: "- Unit / integration: \n- Manual QA: \n- Data fixtures / mocks: \n"
+  - type: textarea
+    id: docs
+    attributes:
+      label: Docs & Runbook Updates
+      description: List documentation, runbooks, or diagrams that must be created or updated.
+  - type: textarea
+    id: deployment
+    attributes:
+      label: Deployment / Rollout Notes
+      description: Capture feature flag plans, release timing, and post-release checks.
+      placeholder: "- Feature flag / toggle\n- Rollout steps\n- Post-release monitoring"
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies & Follow-ups
+      description: Reference blocking issues/PRs or follow-up tasks once this ships.
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence / Attachments
+      description: Paste links to logs, screenshots, sync outputs, or demo recordings as work progresses.
+  - type: checkboxes
+    id: hygiene
+    attributes:
+      label: Workflow Hygiene
+      options:
+        - label: I will update `docs/roadmap-issue-tracker.md` and related project boards before closing this issue.
+          required: true
+        - label: I will attach runbook logs or screenshots when validating this work.
+          required: true
+        - label: I will close or re-triage stale/duplicate issues related to this work.
+          required: true

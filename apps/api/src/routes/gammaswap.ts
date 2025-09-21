@@ -23,6 +23,21 @@ type GammaswapPositionWithRelations = Prisma.GammaswapPositionGetPayload<{
   };
 }>;
 
+function parseRiskMetadata(metadata: Prisma.JsonValue | null | undefined) {
+  if (!metadata || typeof metadata !== 'object') {
+    return { level: null, signals: [] as string[] };
+  }
+
+  const record = metadata as { risk?: { level?: unknown; signals?: unknown } };
+  const risk = record.risk;
+  const level = typeof risk?.level === 'string' ? risk.level : null;
+  const signals = Array.isArray(risk?.signals)
+    ? risk.signals.filter((signal): signal is string => typeof signal === 'string')
+    : [];
+
+  return { level, signals };
+}
+
 export const gammaswapRoutes: FastifyPluginCallback = (app, _opts, done) => {
   app.get('/', async (_request, reply) => {
     const positions: GammaswapPositionWithRelations[] = await app.prisma.gammaswapPosition.findMany({
@@ -53,11 +68,25 @@ export const gammaswapRoutes: FastifyPluginCallback = (app, _opts, done) => {
       const healthRatio = position.healthRatio ? new Decimal(position.healthRatio.toString()) : null;
       const pnl = position.pnlUsd ? new Decimal(position.pnlUsd.toString()) : null;
 
-      const riskLevel = (() => {
+      const { level: metadataRiskLevel, signals: metadataSignals } = parseRiskMetadata(position.metadata);
+      const inferredRiskLevel = (() => {
         if (!healthRatio) return 'unknown';
         if (healthRatio.lessThan(1.05)) return 'critical';
         if (healthRatio.lessThan(1.2)) return 'warning';
         return 'healthy';
+      })();
+      const riskLevel = metadataRiskLevel ?? inferredRiskLevel;
+      const riskSignals = metadataSignals.length > 0 ? metadataSignals : (() => {
+        if (!healthRatio) {
+          return [] as string[];
+        }
+        if (healthRatio.lessThan(1.05)) {
+          return ['Health ratio below 1.05'];
+        }
+        if (healthRatio.lessThan(1.2)) {
+          return ['Health ratio approaching threshold'];
+        }
+        return [] as string[];
       })();
 
       return {
@@ -95,6 +124,7 @@ export const gammaswapRoutes: FastifyPluginCallback = (app, _opts, done) => {
         pnlUsd: pnl ? pnl.toString() : null,
         lastSyncAt: position.lastSyncAt.toISOString(),
         riskLevel,
+        riskSignals,
       };
     });
 
