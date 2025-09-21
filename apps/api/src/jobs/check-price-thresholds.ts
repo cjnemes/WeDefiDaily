@@ -1,8 +1,16 @@
 import crypto from 'node:crypto';
 import Decimal from 'decimal.js';
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
+
+// Type for PriceThreshold with includes
+type PriceThresholdWithRelations = Prisma.PriceThresholdGetPayload<{
+  include: {
+    token: true;
+    wallet: true;
+  };
+}>;
 
 const PRICE_ALERT_COOLDOWN_HOURS = 6; // Prevent spam
 
@@ -19,7 +27,7 @@ async function upsertAlert(params: {
   walletId?: string | null;
   tokenId?: string | null;
   triggerAt?: Date;
-  metadata?: Record<string, unknown>;
+  metadata?: Prisma.InputJsonValue;
   context: Record<string, unknown>;
 }) {
   const contextHash = buildContextHash(params.context);
@@ -81,7 +89,7 @@ async function checkPriceThresholds() {
       token: true,
       wallet: true
     }
-  });
+  }) as PriceThresholdWithRelations[];
 
   if (thresholds.length === 0) {
     console.info('No active price thresholds to check');

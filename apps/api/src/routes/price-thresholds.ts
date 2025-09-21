@@ -1,6 +1,17 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import Decimal from 'decimal.js';
+import { Prisma, PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+// Type for PriceThreshold with includes
+type PriceThresholdWithRelations = Prisma.PriceThresholdGetPayload<{
+  include: {
+    wallet: true;
+    token: true;
+  };
+}>;
 
 const CreateThresholdSchema = z.object({
   walletId: z.string().uuid().optional(),
@@ -8,16 +19,16 @@ const CreateThresholdSchema = z.object({
   thresholdType: z.enum(['above', 'below']),
   thresholdPrice: z.string().or(z.number()).transform(val => new Decimal(val.toString())),
   isEnabled: z.boolean().default(true),
-  metadata: z.record(z.unknown()).optional()
+  metadata: z.any().optional()
 });
 
 const UpdateThresholdSchema = z.object({
   thresholdPrice: z.string().or(z.number()).transform(val => new Decimal(val.toString())).optional(),
   isEnabled: z.boolean().optional(),
-  metadata: z.record(z.unknown()).optional()
+  metadata: z.any().optional()
 });
 
-function serializePriceThreshold(threshold: any) {
+function serializePriceThreshold(threshold: PriceThresholdWithRelations) {
   return {
     id: threshold.id,
     walletId: threshold.walletId,
@@ -48,21 +59,21 @@ function serializePriceThreshold(threshold: any) {
   };
 }
 
-export async function priceThresholdRoutes(fastify: FastifyInstance) {
+export function priceThresholdRoutes(fastify: FastifyInstance) {
   // GET /price-thresholds - List price thresholds
-  fastify.get('/', async (request, reply) => {
+  fastify.get('/', async (request) => {
     const { walletId, tokenId, isEnabled } = request.query as {
       walletId?: string;
       tokenId?: string;
       isEnabled?: string;
     };
 
-    const where: any = {};
+    const where: Prisma.PriceThresholdWhereInput = {};
     if (walletId) where.walletId = walletId;
     if (tokenId) where.tokenId = tokenId;
     if (isEnabled !== undefined) where.isEnabled = isEnabled === 'true';
 
-    const thresholds = await fastify.prisma.priceThreshold.findMany({
+    const thresholds = await prisma.priceThreshold.findMany({
       where,
       include: {
         wallet: true,
@@ -75,11 +86,11 @@ export async function priceThresholdRoutes(fastify: FastifyInstance) {
 
     return {
       meta: {
-        count: thresholds.length,
+        count: (thresholds as PriceThresholdWithRelations[]).length,
         generatedAt: new Date().toISOString()
       },
       data: {
-        thresholds: thresholds.map(serializePriceThreshold)
+        thresholds: (thresholds as PriceThresholdWithRelations[]).map(serializePriceThreshold)
       }
     };
   });
@@ -89,7 +100,7 @@ export async function priceThresholdRoutes(fastify: FastifyInstance) {
     const data = CreateThresholdSchema.parse(request.body);
 
     // Check if threshold already exists
-    const existing = await fastify.prisma.priceThreshold.findFirst({
+    const existing = await prisma.priceThreshold.findFirst({
       where: {
         walletId: data.walletId || null,
         tokenId: data.tokenId,
@@ -108,7 +119,7 @@ export async function priceThresholdRoutes(fastify: FastifyInstance) {
 
     // Verify wallet exists if provided
     if (data.walletId) {
-      const wallet = await fastify.prisma.wallet.findUnique({
+      const wallet = await prisma.wallet.findUnique({
         where: { id: data.walletId }
       });
       if (!wallet) {
@@ -121,7 +132,7 @@ export async function priceThresholdRoutes(fastify: FastifyInstance) {
     }
 
     // Verify token exists
-    const token = await fastify.prisma.token.findUnique({
+    const token = await prisma.token.findUnique({
       where: { id: data.tokenId }
     });
     if (!token) {
@@ -132,7 +143,7 @@ export async function priceThresholdRoutes(fastify: FastifyInstance) {
       };
     }
 
-    const threshold = await fastify.prisma.priceThreshold.create({
+    const threshold = await prisma.priceThreshold.create({
       data: {
         walletId: data.walletId || null,
         tokenId: data.tokenId,
@@ -148,20 +159,20 @@ export async function priceThresholdRoutes(fastify: FastifyInstance) {
     });
 
     reply.status(201);
-    return serializePriceThreshold(threshold);
+    return serializePriceThreshold(threshold as PriceThresholdWithRelations);
   });
 
   // GET /price-thresholds/:id - Get specific threshold
   fastify.get('/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
 
-    const threshold = await fastify.prisma.priceThreshold.findUnique({
+    const threshold = await prisma.priceThreshold.findUnique({
       where: { id },
       include: {
         wallet: true,
         token: true
       }
-    });
+    }) as PriceThresholdWithRelations | null;
 
     if (!threshold) {
       reply.status(404);
@@ -171,7 +182,7 @@ export async function priceThresholdRoutes(fastify: FastifyInstance) {
       };
     }
 
-    return serializePriceThreshold(threshold);
+    return serializePriceThreshold(threshold as PriceThresholdWithRelations);
   });
 
   // PUT /price-thresholds/:id - Update threshold
@@ -179,7 +190,7 @@ export async function priceThresholdRoutes(fastify: FastifyInstance) {
     const { id } = request.params as { id: string };
     const data = UpdateThresholdSchema.parse(request.body);
 
-    const existing = await fastify.prisma.priceThreshold.findUnique({
+    const existing = await prisma.priceThreshold.findUnique({
       where: { id }
     });
 
@@ -191,7 +202,7 @@ export async function priceThresholdRoutes(fastify: FastifyInstance) {
       };
     }
 
-    const threshold = await fastify.prisma.priceThreshold.update({
+    const threshold = await prisma.priceThreshold.update({
       where: { id },
       data: {
         ...(data.thresholdPrice && { thresholdPrice: data.thresholdPrice }),
@@ -204,14 +215,14 @@ export async function priceThresholdRoutes(fastify: FastifyInstance) {
       }
     });
 
-    return serializePriceThreshold(threshold);
+    return serializePriceThreshold(threshold as PriceThresholdWithRelations);
   });
 
   // DELETE /price-thresholds/:id - Delete threshold
   fastify.delete('/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
 
-    const existing = await fastify.prisma.priceThreshold.findUnique({
+    const existing = await prisma.priceThreshold.findUnique({
       where: { id }
     });
 
@@ -223,7 +234,7 @@ export async function priceThresholdRoutes(fastify: FastifyInstance) {
       };
     }
 
-    await fastify.prisma.priceThreshold.delete({
+    await prisma.priceThreshold.delete({
       where: { id }
     });
 

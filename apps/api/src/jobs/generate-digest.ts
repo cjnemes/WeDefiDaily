@@ -285,7 +285,8 @@ async function collectDigestData(): Promise<DigestData> {
         riskLevel: pos.metadata && typeof pos.metadata === 'object' &&
           pos.metadata !== null && 'risk' in pos.metadata &&
           typeof pos.metadata.risk === 'object' && pos.metadata.risk !== null &&
-          'level' in pos.metadata.risk ? String(pos.metadata.risk.level) : 'unknown',
+          'level' in pos.metadata.risk && typeof pos.metadata.risk.level === 'string'
+          ? pos.metadata.risk.level : 'unknown',
         notionalUsd: pos.notional ? pos.notional.toString() : '0'
       }))
     },
