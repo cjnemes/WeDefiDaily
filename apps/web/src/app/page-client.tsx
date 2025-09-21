@@ -6,14 +6,11 @@ import { Watchlist } from '@/components/watchlist';
 import {
   fetchPortfolio,
   fetchGovernance,
-  fetchRewards,
-  fetchGammaswap,
 } from '@/lib/api';
 
 // Import formatting functions and types
 import {
   formatCurrency,
-  formatPercentage,
   formatQuantity,
   formatCountdown,
   shortenAddress,
@@ -63,16 +60,6 @@ export function DashboardClient() {
     queryFn: fetchGovernance,
   });
 
-  const { data: rewards } = useQuery({
-    queryKey: ['rewards'],
-    queryFn: fetchRewards,
-  });
-
-  const { data: gammaswap } = useQuery({
-    queryKey: ['gammaswap'],
-    queryFn: fetchGammaswap,
-  });
-
   const totalUsd = portfolio ? formatCurrency(portfolio.meta.totalUsd, "—") : "—";
   const wallets = portfolio?.data ?? [];
 
@@ -88,13 +75,6 @@ export function DashboardClient() {
 
   const nextEpoch = governance?.data.epochs.find(
     (epoch) => new Date(epoch.startsAt).getTime() > Date.now()
-  );
-
-  const topBribes = (governance?.data.bribes ?? []).slice(0, 4);
-  const rewardOpportunities = rewards?.data.opportunities ?? [];
-  const gammaswapPositions = gammaswap?.data.positions ?? [];
-  const riskyGammaswapPositions = gammaswapPositions.filter(
-    (position) => position.riskLevel !== 'healthy'
   );
 
   return (

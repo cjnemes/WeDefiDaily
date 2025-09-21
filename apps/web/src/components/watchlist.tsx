@@ -313,7 +313,7 @@ export function Watchlist() {
         </div>
       ) : thresholds.length === 0 ? (
         <div className="rounded-xl border border-dashed border-foreground/15 bg-background/40 px-4 py-8 text-center text-sm text-foreground/60">
-          No price alerts configured. Click "Add Alert" to get started.
+          No price alerts configured. Click &quot;Add Alert&quot; to get started.
         </div>
       ) : (
         <div className="space-y-3">
