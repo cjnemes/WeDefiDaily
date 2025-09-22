@@ -1,5 +1,5 @@
 import { mkdir, writeFile } from 'node:fs/promises';
-import { dirname, join, parse, resolve } from 'node:path';
+import { dirname, join, parse, relative, resolve } from 'node:path';
 import { PrismaClient } from '@prisma/client';
 
 import { buildDigest, renderDigestMarkdown, renderDigestHtml, summarizeDigest } from '../services/digest';
@@ -11,13 +11,17 @@ interface DigestCliOptions {
   outputPath: string;
   writeToStdout: boolean;
   format: 'markdown' | 'html' | 'both';
+  writeJson: boolean;
+  jsonOutputPath?: string;
 }
 
-function parseArgs(): DigestCliOptions {
+function parseArgs(baseDirectory: string): DigestCliOptions {
   const argv = process.argv.slice(2);
   let outputPath: string | undefined;
   let writeToStdout = false;
   let format: 'markdown' | 'html' | 'both' = 'markdown';
+  let writeJson = false;
+  let jsonOutputPath: string | undefined;
 
   argv.forEach((arg) => {
     if (arg.startsWith('--output=')) {
@@ -35,18 +39,31 @@ function parseArgs(): DigestCliOptions {
         format = value;
       }
     }
+    if (arg === '--json') {
+      writeJson = true;
+    }
+    if (arg.startsWith('--json=')) {
+      const value = arg.split('=')[1];
+      if (value) {
+        writeJson = true;
+        jsonOutputPath = resolve(process.cwd(), value);
+      }
+    }
   });
 
   if (!outputPath) {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    outputPath = join(DEFAULT_OUTPUT_DIR, `digest-${timestamp}.md`);
+    outputPath = join(baseDirectory, `digest-${timestamp}.md`);
   }
 
-  return { outputPath, writeToStdout, format };
+  return { outputPath, writeToStdout, format, writeJson, jsonOutputPath };
 }
 
 async function main() {
-  const options = parseArgs();
+  const baseDirectory = process.env.DIGEST_OUTPUT_DIR
+    ? resolve(process.cwd(), process.env.DIGEST_OUTPUT_DIR)
+    : DEFAULT_OUTPUT_DIR;
+  const options = parseArgs(baseDirectory);
 
   console.info('Collecting daily digest data...');
   const digestData = await buildDigest(prisma);
@@ -57,9 +74,11 @@ async function main() {
 
   const shouldWriteMarkdown = options.format === 'markdown' || options.format === 'both';
   const shouldWriteHtml = options.format === 'html' || options.format === 'both';
+  const shouldWriteJson = options.writeJson;
 
+  let markdownPath: string | undefined;
   if (shouldWriteMarkdown) {
-    const markdownPath = options.format === 'markdown' ? options.outputPath : `${basePath}.md`;
+    markdownPath = options.format === 'markdown' ? options.outputPath : `${basePath}.md`;
     const markdownDir = dirname(markdownPath);
     await mkdir(markdownDir, { recursive: true });
     const markdown = renderDigestMarkdown(digestData);
@@ -72,8 +91,9 @@ async function main() {
     }
   }
 
+  let htmlPath: string | undefined;
   if (shouldWriteHtml) {
-    const htmlPath = options.format === 'html' ? options.outputPath : `${basePath}.html`;
+    htmlPath = options.format === 'html' ? options.outputPath : `${basePath}.html`;
     const htmlDir = dirname(htmlPath);
     await mkdir(htmlDir, { recursive: true });
     const html = renderDigestHtml(digestData);
@@ -86,7 +106,45 @@ async function main() {
     }
   }
 
+  let jsonPath: string | undefined;
+  if (shouldWriteJson) {
+    jsonPath = options.jsonOutputPath ?? `${basePath}.json`;
+    const jsonDir = dirname(jsonPath);
+    await mkdir(jsonDir, { recursive: true });
+    await writeFile(jsonPath, JSON.stringify(digestData, null, 2), 'utf8');
+    console.info(`JSON digest saved to ${jsonPath}`);
+    if (options.writeToStdout) {
+      console.log('\n--- JSON Digest ---\n');
+      console.log(JSON.stringify(digestData, null, 2));
+      console.log('\n--------------------');
+    }
+  }
+
+  const toRelativePath = (filePath?: string) => (filePath ? relative(process.cwd(), filePath) : null);
+
+  const digestRecord = await prisma.digestRun.create({
+    data: {
+      generatedAt: new Date(digestData.meta.generatedAt),
+      markdownPath: toRelativePath(markdownPath),
+      htmlPath: toRelativePath(htmlPath),
+      jsonPath: toRelativePath(jsonPath),
+      portfolioTotal: digestData.meta.portfolioTotal,
+      walletsTracked: digestData.meta.walletsTracked,
+      actionableRewards: digestData.meta.actionableRewards,
+      criticalAlerts: digestData.meta.criticalAlerts,
+      warningAlerts: digestData.meta.warningAlerts,
+      summary,
+      metadata: {
+        format: options.format,
+        includesJson: shouldWriteJson,
+        topHoldings: digestData.portfolio.topHoldings.length,
+        upcomingEpochs: digestData.governance.upcomingEpochs.length,
+      },
+    },
+  });
+
   console.info(summary);
+  console.info(`Digest run recorded (id=${digestRecord.id})`);
 }
 
 main()

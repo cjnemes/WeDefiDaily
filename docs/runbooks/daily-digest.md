@@ -4,8 +4,9 @@ Use this guide to generate and review the Phase 3a daily digest output.
 
 ## Prerequisites
 - API service configuration initialized (`.env` with database credentials).
-- Balance/governance/rewards sync jobs have been executed recently (`npm run sync:*`).
-- Output directory defaults to `storage/digests` relative to the repository root.
+- Run `npm run prisma:db:push --workspace @wedefidaily/api` at least once to create the `DigestRun` table.
+- Balance/governance/rewards sync jobs executed recently (`npm run sync:*`).
+- Optional: set `DIGEST_OUTPUT_DIR` in `.env` to customise where reports are written (defaults to `storage/digests`).
 
 ## Commands
 
@@ -26,6 +27,15 @@ npm run generate:digest -- --format=html
 npm run generate:digest -- --format=both
 ```
 
+### JSON Output
+```bash
+npm run generate:digest -- --json
+# Writes digest-<timestamp>.json alongside other files
+
+# Or specify a path
+npm run generate:digest -- --json=tmp/digest.json
+```
+
 ### Custom Output Path & Stdout Preview
 ```bash
 npm run generate:digest -- --output=tmp/digest.md --stdout
@@ -35,6 +45,10 @@ npm run generate:digest -- --output=tmp/digest.md --stdout
 - Open the generated file(s) and confirm sections exist: Executive Summary, Portfolio, Governance, Rewards, Gammaswap, Alerts.
 - Ensure currency/percentage values are formatted correctly.
 - Confirm summary line at the end of the CLI run (e.g., `Digest · portfolio=...`).
+- Inspect the `DigestRun` table to verify a record was persisted:
+  ```bash
+  PGPASSWORD=... psql -h localhost -U wedefi -d wedefi -c 'SELECT id, generated_at, markdown_path, html_path FROM "DigestRun" ORDER BY "createdAt" DESC LIMIT 3;'
+  ```
 
 ## Troubleshooting
 - If the job fails, check the database for required records (balances, governance locks, etc.).

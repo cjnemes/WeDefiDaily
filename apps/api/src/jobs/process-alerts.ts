@@ -1,7 +1,6 @@
 import crypto from 'node:crypto';
 import Decimal from 'decimal.js';
 import { Prisma, PrismaClient } from '@prisma/client';
-import { env } from '../config';
 import {
   ALERT_WITH_RELATIONS_INCLUDE,
   AlertWithRelations,
@@ -227,8 +226,12 @@ function resolveChannelFilter(): string[] | undefined {
     return cliFilter;
   }
 
-  if (env.ALERT_CHANNEL_FILTER) {
-    return env.ALERT_CHANNEL_FILTER.split(',').map((value) => value.trim()).filter(Boolean);
+  const envFilter = process.env.ALERT_CHANNEL_FILTER;
+  if (envFilter) {
+    return envFilter
+      .split(',')
+      .map((value) => value.trim())
+      .filter((value): value is string => value.length > 0);
   }
 
   return undefined;
@@ -475,10 +478,7 @@ async function main() {
     console.info(`Channel filter applied: ${channelFilter.join(', ')}`);
   }
 
-  const adapters = createDeliveryAdapters({
-    slackWebhookUrl: env.SLACK_ALERT_WEBHOOK_URL,
-    channelFilter,
-  });
+  const adapters = createDeliveryAdapters({ channelFilter });
 
   const summary = createEmptySummary();
 

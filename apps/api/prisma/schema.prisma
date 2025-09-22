@@ -125,6 +125,22 @@ model PriceSnapshot {
   @@index([tokenId, recordedAt], map: "price_snapshot_token_recorded_idx")
 }
 
+model DigestRun {
+  id                String   @id @default(uuid())
+  generatedAt       DateTime @default(now())
+  markdownPath      String?
+  htmlPath          String?
+  jsonPath          String?
+  portfolioTotal    Decimal? @db.Decimal(36, 18)
+  walletsTracked    Int
+  actionableRewards Int
+  criticalAlerts    Int
+  warningAlerts     Int
+  summary           String
+  metadata          Json?
+  createdAt         DateTime @default(now())
+}
+
 model GovernanceLock {
   id               String   @id @default(uuid())
   protocolId       String
