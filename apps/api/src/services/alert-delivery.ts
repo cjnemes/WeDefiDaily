@@ -100,3 +100,18 @@ export const consoleAlertAdapter: AlertDeliveryAdapter = {
     });
   },
 };
+
+export interface DeliveryAdapterFactoryOptions {
+  channelFilter?: string[];
+}
+
+export function createDeliveryAdapters(options: DeliveryAdapterFactoryOptions = {}): AlertDeliveryAdapter[] {
+  const adapters: AlertDeliveryAdapter[] = [consoleAlertAdapter];
+
+  if (options.channelFilter && options.channelFilter.length > 0) {
+    const allowed = new Set(options.channelFilter.map((channel) => channel.trim()).filter(Boolean));
+    return adapters.filter((adapter) => allowed.has(adapter.channel));
+  }
+
+  return adapters;
+}
