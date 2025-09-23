@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join, parse, relative, resolve } from 'node:path';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 
 import { buildDigest, renderDigestMarkdown, renderDigestHtml, summarizeDigest } from '../services/digest';
 
@@ -64,6 +64,8 @@ async function main() {
     ? resolve(process.cwd(), process.env.DIGEST_OUTPUT_DIR)
     : DEFAULT_OUTPUT_DIR;
   const options = parseArgs(baseDirectory);
+  await mkdir(baseDirectory, { recursive: true });
+  await mkdir(dirname(options.outputPath), { recursive: true });
 
   console.info('Collecting daily digest data...');
   const digestData = await buildDigest(prisma);
@@ -122,29 +124,37 @@ async function main() {
 
   const toRelativePath = (filePath?: string) => (filePath ? relative(process.cwd(), filePath) : null);
 
-  const digestRecord = await prisma.digestRun.create({
-    data: {
-      generatedAt: new Date(digestData.meta.generatedAt),
-      markdownPath: toRelativePath(markdownPath),
-      htmlPath: toRelativePath(htmlPath),
-      jsonPath: toRelativePath(jsonPath),
-      portfolioTotal: digestData.meta.portfolioTotal,
-      walletsTracked: digestData.meta.walletsTracked,
-      actionableRewards: digestData.meta.actionableRewards,
-      criticalAlerts: digestData.meta.criticalAlerts,
-      warningAlerts: digestData.meta.warningAlerts,
-      summary,
-      metadata: {
-        format: options.format,
-        includesJson: shouldWriteJson,
-        topHoldings: digestData.portfolio.topHoldings.length,
-        upcomingEpochs: digestData.governance.upcomingEpochs.length,
+  try {
+    const digestRecord = await prisma.digestRun.create({
+      data: {
+        generatedAt: new Date(digestData.meta.generatedAt),
+        markdownPath: toRelativePath(markdownPath),
+        htmlPath: toRelativePath(htmlPath),
+        jsonPath: toRelativePath(jsonPath),
+        portfolioTotal: digestData.meta.portfolioTotal,
+        walletsTracked: digestData.meta.walletsTracked,
+        actionableRewards: digestData.meta.actionableRewards,
+        criticalAlerts: digestData.meta.criticalAlerts,
+        warningAlerts: digestData.meta.warningAlerts,
+        summary,
+        metadata: {
+          format: options.format,
+          includesJson: shouldWriteJson,
+          topHoldings: digestData.portfolio.topHoldings.length,
+          upcomingEpochs: digestData.governance.upcomingEpochs.length,
+        },
       },
-    },
-  });
-
-  console.info(summary);
-  console.info(`Digest run recorded (id=${digestRecord.id})`);
+    });
+    console.info(summary);
+    console.info(`Digest run recorded (id=${digestRecord.id})`);
+  } catch (error) {
+    console.info(summary);
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2021') {
+      console.warn('DigestRun table not found. Run `npm run prisma:db:push --workspace @wedefidaily/api` to create it.');
+    } else {
+      throw error;
+    }
+  }
 }
 
 main()
