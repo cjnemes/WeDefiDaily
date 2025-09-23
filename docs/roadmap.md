@@ -4,7 +4,8 @@
 - ✅ **Phase 0 – Discovery & Foundations**: Repository scaffolding, environment handling, CI, Prisma schema, and baseline sync jobs are in place.
 - ✅ **Phase 1 – Core Data Infrastructure**: Data adapters, portfolio/governance endpoints, and dashboard tiles are live.
 - ✅ **Phase 2 – Protocol Modules**: Yield tracker, governance modules, and Gammaswap integration with risk assessment complete.
-- 🔄 **Phase 3a – Alerting & Digest**: Core infrastructure delivered; remaining work on external delivery channels.
+- ✅ **Phase 3 – Alerts & UX Polish**: Watchlist, digest, and governance dashboards validated; external integrations intentionally deferred.
+- 📝 **Phase 4 – Intelligence Experiments**: Planning underway (see docs/plans/phase-4-intelligence.md).
 
 ## Near-Term Focus
 
@@ -23,26 +24,26 @@
 
 ## Mid-Term Initiatives
 
-### Phase 3a – Alerting & Digest (🔄 Mostly Complete)
-- ✅ Alert processing pipeline with database schema and lifecycle management
-- ✅ Alert types: claim due, epoch countdown, risk triggers, price thresholds
-- ✅ Generate daily digest summarizing portfolio/governance actions (Markdown + CSV export)
-- ✅ Enhanced CLI notifications with emoji formatting and structured output
-- ⏳ **Remaining**: External delivery channels (Telegram, email) and job runner (BullMQ/Temporal)
+### Phase 3 Recap – Alerts & UX
+- ✅ Alert processing pipeline with status lifecycle + delivery history via `/v1/alerts`
+- ✅ Console delivery with per-channel summaries (external adapters intentionally omitted)
+- ✅ Daily digest CLI (markdown/html/json) with `DigestRun` persistence and runbook
+- ✅ Watchlist polish: API integration, modal UX, responsive design (issue #26)
+- ✅ Docs: validation runbooks, QA evidence, digest workflow instructions
 
-### Phase 3b – Advanced UX Enhancements (1–2 weeks)
-- Interactive watchlist with add/edit flows and real-time price trends.
-- Drill-down pages for wallets and governance epochs.
-- ✅ Export capability (Markdown/CSV) for the daily digest *(delivered early in Phase 3a)*
-- Client-side caching powered by React Query for smoother refresh.
+### Phase 4 – Intelligence Experiments (Backlog)
+See `docs/plans/phase-4-intelligence.md` for strategy. Initial tasks:
+- Balance delta highlights ([#32](https://github.com/cjnemes/WeDefiDaily/issues/32))
+- Governance unlock reminders ([#33](https://github.com/cjnemes/WeDefiDaily/issues/33))
+- Reward decay monitor ([#34](https://github.com/cjnemes/WeDefiDaily/issues/34))
+- Gammaswap health trend insight ([#35](https://github.com/cjnemes/WeDefiDaily/issues/35))
 
 ## Long-Range Exploration
 
-### Phase 4 – Intelligence (post-alerting, 3+ weeks)
-- Bribe ROI simulations with vote redistribution experiments.
-- Historical analytics (APR trend charts, performance breakdowns).
-- Scenario planner for re-lock decisions and treasury actions.
-- Evaluate machine-assisted recommendations (stretch goal).
+### Phase 4 – Intelligence (3+ weeks)
+- Phase 4 plan document captured with heuristics + follow-ups (docs/plans/phase-4-intelligence.md)
+- Four backlog issues created for initial heuristics (#32–#35)
+- Stretch goals (ROI simulations, scenario planner) remain on umbrella issue #20.
 
 ## Enablers & Ongoing Workstreams
 - Add integration tests around governance sync (mock fetch responses).
