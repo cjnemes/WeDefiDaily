@@ -1,0 +1,48 @@
+{
+  "meta": {
+    "generatedAt": "2025-09-22T20:15:00.000Z",
+    "portfolioTotal": "1000",
+    "walletsTracked": 1,
+    "actionableRewards": 1,
+    "criticalAlerts": 1,
+    "warningAlerts": 0
+  },
+  "portfolio": {
+    "totalUsd": "1000",
+    "topHoldings": [
+      {
+        "symbol": "AERO",
+        "name": "Aerodrome",
+        "usdValue": "500",
+        "chainName": "Base"
+      }
+    ]
+  },
+  "governance": {
+    "totalVotingPower": "42",
+    "upcomingEpochs": [],
+    "topBribes": []
+  },
+  "rewards": {
+    "actionableCount": 1,
+    "totalNetUsd": "120",
+    "overdueCount": 0,
+    "upcomingDeadlines": []
+  },
+  "gammaswap": {
+    "totalPositions": 1,
+    "riskyPositions": 0,
+    "positions": []
+  },
+  "alerts": {
+    "critical": [
+      {
+        "type": "reward_claim",
+        "title": "Claim rewards",
+        "description": "Claim now",
+        "triggerAt": "2025-09-22T20:15:00.000Z"
+      }
+    ],
+    "warnings": []
+  }
+}

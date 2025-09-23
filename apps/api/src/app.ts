@@ -10,6 +10,7 @@ import { rewardsRoutes } from './routes/rewards';
 import { gammaswapRoutes } from './routes/gammaswap';
 import { alertsRoutes } from './routes/alerts';
 import { priceThresholdRoutes } from './routes/price-thresholds';
+import { tokenRoutes } from './routes/tokens';
 
 export interface BuildAppOptions {
   enableRequestLogging?: boolean;
@@ -43,6 +44,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   await app.register(gammaswapRoutes, { prefix: '/v1/gammaswap' });
   await app.register(alertsRoutes, { prefix: '/v1/alerts' });
   await app.register(priceThresholdRoutes, { prefix: '/v1/price-thresholds' });
+  await app.register(tokenRoutes, { prefix: '/v1/tokens' });
 
   return app;
 }

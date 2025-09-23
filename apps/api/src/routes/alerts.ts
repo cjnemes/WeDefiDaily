@@ -1,16 +1,13 @@
 import type { FastifyPluginCallback } from 'fastify';
 import { Prisma } from '@prisma/client';
 import { z } from 'zod';
-import {
-  ALERT_WITH_RELATIONS_INCLUDE,
-  AlertWithRelations,
-  hasSuccessfulDelivery,
-} from '../services/alert-delivery';
+import { ALERT_WITH_RELATIONS_INCLUDE, AlertWithRelations } from '../services/alert-delivery';
 
 const ALERT_QUERY_SCHEMA = z.object({
   status: z.enum(['pending', 'acknowledged', 'resolved', 'dispatched']).optional(),
   severity: z.enum(['info', 'warning', 'critical']).optional(),
-  channel: z.string().optional(),
+  channel: z.string().trim().optional(),
+  deliveredSince: z.coerce.date().optional(),
   limit: z.coerce.number().int().positive().max(200).optional(),
 });
 
@@ -101,24 +98,34 @@ export const alertsRoutes: FastifyPluginCallback = (app, _opts, done) => {
     const filters = ALERT_QUERY_SCHEMA.parse(request.query ?? {});
     const limit = filters.limit ?? 100;
 
+    const where: Prisma.AlertWhereInput = {
+      status: filters.status ?? undefined,
+      severity: filters.severity ?? undefined,
+    };
+
+    if (filters.channel || filters.deliveredSince) {
+      where.deliveries = {
+        some: {
+          success: true,
+          channel: filters.channel ?? undefined,
+          createdAt: filters.deliveredSince
+            ? { gte: filters.deliveredSince }
+            : undefined,
+        },
+      };
+    }
+
     const alerts = await app.prisma.alert.findMany({
-      where: {
-        status: filters.status ?? undefined,
-        severity: filters.severity ?? undefined,
-      },
+      where,
       include: ALERT_WITH_RELATIONS_INCLUDE,
       orderBy: [{ triggerAt: 'desc' }],
       take: limit,
     });
 
-    const filtered = filters.channel
-      ? alerts.filter((alert) => hasSuccessfulDelivery(alert, filters.channel as string))
-      : alerts;
-
     return reply.send({
-      data: filtered.map(serializeAlert),
+      data: alerts.map(serializeAlert),
       meta: {
-        count: filtered.length,
+        count: alerts.length,
         generatedAt: new Date().toISOString(),
       },
     });

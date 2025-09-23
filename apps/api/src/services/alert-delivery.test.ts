@@ -1,27 +1,27 @@
 import { describe, expect, it } from 'vitest';
+import { createDeliveryAdapters } from './alert-delivery';
 
-import { hasSuccessfulDelivery } from './alert-delivery';
-
-const buildAlert = (deliveries: Array<{ channel: string; success: boolean }>) => ({
-  deliveries,
-}) as unknown as Parameters<typeof hasSuccessfulDelivery>[0];
-
-describe('hasSuccessfulDelivery', () => {
-  it('returns true when a delivery succeeded with the same channel', () => {
-    const alert = buildAlert([
-      { channel: 'console', success: false },
-      { channel: 'slack', success: true },
-    ]);
-
-    expect(hasSuccessfulDelivery(alert, 'slack')).toBe(true);
+describe('createDeliveryAdapters', () => {
+  it('always includes the console adapter by default', () => {
+    const adapters = createDeliveryAdapters();
+    const channels = adapters.map((adapter) => adapter.channel);
+    expect(channels).toContain('console');
+    expect(channels.length).toBe(1);
   });
 
-  it('returns false when no successful delivery exists for the channel', () => {
-    const alert = buildAlert([
-      { channel: 'console', success: false },
-      { channel: 'slack', success: false },
-    ]);
+  it('adds the Slack adapter when webhook is provided', () => {
+    const adapters = createDeliveryAdapters({ slackWebhookUrl: 'https://hooks.slack.com/services/test/test/test' });
+    const channels = adapters.map((adapter) => adapter.channel);
+    expect(channels).toContain('console');
+    expect(channels).toContain('slack');
+  });
 
-    expect(hasSuccessfulDelivery(alert, 'console')).toBe(false);
+  it('applies channel filter to adapter list', () => {
+    const adapters = createDeliveryAdapters({
+      slackWebhookUrl: 'https://hooks.slack.com/services/test/test/test',
+      channelFilter: ['slack'],
+    });
+    const channels = adapters.map((adapter) => adapter.channel);
+    expect(channels).toEqual(['slack']);
   });
 });
