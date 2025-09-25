@@ -1,4 +1,6 @@
 import { Prisma } from '@prisma/client';
+import { deliverAlertToTelegram, type TelegramConfig } from './delivery/telegram';
+import { deliverAlertToEmail, type EmailConfig } from './delivery/email';
 
 export const ALERT_WITH_RELATIONS_INCLUDE = {
   wallet: {
@@ -164,8 +166,44 @@ function createSlackAdapter(options: SlackAdapterOptions): AlertDeliveryAdapter 
   } satisfies AlertDeliveryAdapter;
 }
 
+function createTelegramAdapter(config: TelegramConfig): AlertDeliveryAdapter {
+  return {
+    channel: 'telegram',
+    async deliver(alert) {
+      const result = await deliverAlertToTelegram(alert, config);
+      return {
+        success: result.success,
+        metadata: {
+          deliveredAt: new Date().toISOString(),
+          messageId: result.messageId,
+          error: result.error,
+        },
+      };
+    },
+  };
+}
+
+function createEmailAdapter(config: EmailConfig): AlertDeliveryAdapter {
+  return {
+    channel: 'email',
+    async deliver(alert) {
+      const result = await deliverAlertToEmail(alert, config);
+      return {
+        success: result.success,
+        metadata: {
+          deliveredAt: new Date().toISOString(),
+          messageId: result.messageId,
+          error: result.error,
+        },
+      };
+    },
+  };
+}
+
 export interface DeliveryAdapterFactoryOptions {
   slackWebhookUrl?: string;
+  telegramConfig?: TelegramConfig;
+  emailConfig?: EmailConfig;
   channelFilter?: string[];
   fetchImpl?: typeof fetch;
 }
@@ -175,6 +213,14 @@ export function createDeliveryAdapters(options: DeliveryAdapterFactoryOptions = 
 
   if (options.slackWebhookUrl) {
     adapters.push(createSlackAdapter({ webhookUrl: options.slackWebhookUrl, fetchImpl: options.fetchImpl }));
+  }
+
+  if (options.telegramConfig) {
+    adapters.push(createTelegramAdapter(options.telegramConfig));
+  }
+
+  if (options.emailConfig) {
+    adapters.push(createEmailAdapter(options.emailConfig));
   }
 
   if (options.channelFilter && options.channelFilter.length > 0) {

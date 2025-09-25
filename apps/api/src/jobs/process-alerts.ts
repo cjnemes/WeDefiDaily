@@ -478,7 +478,34 @@ async function main() {
     console.info(`Channel filter applied: ${channelFilter.join(', ')}`);
   }
 
-  const adapters = createDeliveryAdapters({ channelFilter });
+  // Configure delivery adapters from environment
+  const telegramConfig = process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID
+    ? {
+        botToken: process.env.TELEGRAM_BOT_TOKEN,
+        chatId: process.env.TELEGRAM_CHAT_ID,
+      }
+    : undefined;
+
+  const emailConfig = process.env.SMTP_HOST && process.env.SMTP_USER && process.env.EMAIL_TO
+    ? {
+        host: process.env.SMTP_HOST,
+        port: parseInt(process.env.SMTP_PORT ?? '587', 10),
+        secure: process.env.SMTP_SECURE === 'true',
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS ?? '',
+        },
+        from: process.env.EMAIL_FROM ?? 'alerts@wedefidaily.com',
+        to: process.env.EMAIL_TO.split(',').map(email => email.trim()),
+      }
+    : undefined;
+
+  const adapters = createDeliveryAdapters({
+    channelFilter,
+    slackWebhookUrl: process.env.SLACK_WEBHOOK_URL,
+    telegramConfig,
+    emailConfig,
+  });
 
   const summary = createEmptySummary();
 
