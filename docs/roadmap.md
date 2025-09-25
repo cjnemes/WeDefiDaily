@@ -33,10 +33,11 @@
 
 ### Phase 4 – Intelligence Experiments (Backlog)
 See `docs/plans/phase-4-intelligence.md` for strategy. Initial tasks:
-- Balance delta highlights ([#32](https://github.com/cjnemes/WeDefiDaily/issues/32))
-- Governance unlock reminders ([#33](https://github.com/cjnemes/WeDefiDaily/issues/33))
-- Reward decay monitor ([#34](https://github.com/cjnemes/WeDefiDaily/issues/34))
-- Gammaswap health trend insight ([#35](https://github.com/cjnemes/WeDefiDaily/issues/35))
+- Balance delta highlights ([#32](https://github.com/cjnemes/WeDefiDaily/issues/32)) – intelligence notes + balance snapshots in progress
+- Governance unlock reminders ([#33](https://github.com/cjnemes/WeDefiDaily/issues/33)) – governance snapshots + digest reminders underway
+- Reward decay monitor ([#34](https://github.com/cjnemes/WeDefiDaily/issues/34)) – reward snapshots + decay notes underway
+- Gammaswap health trend insight ([#35](https://github.com/cjnemes/WeDefiDaily/issues/35)) – Gammaswap snapshots + health-drop notes underway
+- Intelligence alerts integration ([#36](https://github.com/cjnemes/WeDefiDaily/issues/36)) – wiring intelligence signals into alert pipeline in progress
 
 ## Long-Range Exploration
 

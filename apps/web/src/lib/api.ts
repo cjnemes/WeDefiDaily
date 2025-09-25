@@ -10,13 +10,21 @@ async function fetchApi<T>(
   options?: RequestInit
 ): Promise<T> {
   const url = `${API_URL}${endpoint}`;
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers,
+      },
+    });
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : 'Unknown error';
+    throw new Error(
+      `Failed to reach API at ${url}. Ensure the API server is running (npm run dev:api) and NEXT_PUBLIC_API_URL points to it. (${reason})`,
+    );
+  }
 
   const contentType = response.headers.get('content-type') ?? '';
   const isJson = contentType.includes('application/json');
@@ -92,6 +100,8 @@ export interface PortfolioResponse {
 export function fetchPortfolio() {
   return fetchApi<PortfolioResponse>('/v1/portfolio');
 }
+
+// Wallet API
 
 // Governance API
 export interface GovernanceResponse {
@@ -205,6 +215,93 @@ export interface GammaswapResponse {
 
 export function fetchGammaswap() {
   return fetchApi<GammaswapResponse>('/v1/gammaswap');
+}
+
+// Digest API
+export interface DigestRunRecord {
+  id: string;
+  generatedAt: string;
+  markdownPath: string | null;
+  htmlPath: string | null;
+  jsonPath: string | null;
+  portfolioTotal: string | null;
+  walletsTracked: number;
+  actionableRewards: number;
+  criticalAlerts: number;
+  warningAlerts: number;
+  summary: string;
+  metadata: DigestRunMetadata | null;
+  createdAt: string;
+  alerts?: {
+    total: number;
+    balance: number;
+    governance: number;
+    reward: number;
+    gammaswap: number;
+  };
+  intelligence?: {
+    total: number;
+    balance: number;
+    governance: number;
+    reward: number;
+    gammaswap: number;
+  };
+}
+
+export interface DigestRunMetadata {
+  format?: string;
+  includesJson?: boolean;
+  topHoldings?: number;
+  upcomingEpochs?: number;
+  balanceDeltaThreshold?: number;
+  governanceUnlockWindowDays?: number;
+  rewardWarningHours?: number;
+  rewardLowValueThreshold?: number;
+  gammaswapHealthDropThreshold?: number;
+  intelligenceBalanceNotes?: number;
+  intelligenceGovernanceNotes?: number;
+  intelligenceRewardNotes?: number;
+  intelligenceGammaswapNotes?: number;
+  [key: string]: unknown;
+}
+
+export interface TriggerDigestResponse {
+  data: {
+    run: DigestRunRecord;
+    snapshots: {
+      walletBalances: number;
+      governanceLocks: number;
+      rewards: number;
+      gammaswapPositions: number;
+    };
+    digest?: unknown;
+  };
+  meta: {
+    generatedAt: string;
+  };
+}
+
+export function triggerDigest(options?: {
+  balanceDeltaThreshold?: number;
+  governanceUnlockWindowDays?: number;
+  includeDigest?: boolean;
+}) {
+  return fetchApi<TriggerDigestResponse>('/v1/digest', {
+    method: 'POST',
+    body: JSON.stringify(options ?? {}),
+  });
+}
+
+export interface DigestRunListResponse {
+  data: DigestRunRecord[];
+  meta: {
+    count: number;
+    generatedAt: string;
+  };
+}
+
+export function fetchRecentDigests() {
+  return fetchApi<DigestRunListResponse>('/v1/digest');
 }
 
 // Wallets API

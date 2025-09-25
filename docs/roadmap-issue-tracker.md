@@ -18,9 +18,10 @@ Map each roadmap bullet to a GitHub issue so progress and reviews stay traceable
 | Phase 3b | Price watchlist polish | [#26](https://github.com/cjnemes/WeDefiDaily/issues/26) | 🚧 In progress |
 | Phase 3b | Advanced UX enhancements | [#19](https://github.com/cjnemes/WeDefiDaily/issues/19) | 🔄 Under review (PR #24) |
 | Phase 4 | Intelligence roadmap umbrella | [#20](https://github.com/cjnemes/WeDefiDaily/issues/20) | 📝 Backlog |
-| Phase 4 | Balance delta highlights | [#32](https://github.com/cjnemes/WeDefiDaily/issues/32) | 📝 Backlog |
-| Phase 4 | Governance unlock reminders | [#33](https://github.com/cjnemes/WeDefiDaily/issues/33) | 📝 Backlog |
-| Phase 4 | Reward decay monitor | [#34](https://github.com/cjnemes/WeDefiDaily/issues/34) | 📝 Backlog |
-| Phase 4 | Gammaswap health trend insight | [#35](https://github.com/cjnemes/WeDefiDaily/issues/35) | 📝 Backlog |
+| Phase 4 | Balance delta highlights | [#32](https://github.com/cjnemes/WeDefiDaily/issues/32) | 🚧 In progress |
+| Phase 4 | Governance unlock reminders | [#33](https://github.com/cjnemes/WeDefiDaily/issues/33) | 🚧 In progress |
+| Phase 4 | Reward decay monitor | [#34](https://github.com/cjnemes/WeDefiDaily/issues/34) | 🚧 In progress |
+| Phase 4 | Gammaswap health trend insight | [#35](https://github.com/cjnemes/WeDefiDaily/issues/35) | 🚧 In progress |
+| Phase 4 | Intelligence alerts integration | [#36](https://github.com/cjnemes/WeDefiDaily/issues/36) | 🚧 In progress (development active) |
 
 Update this table whenever you open/close issues so the roadmap and GitHub board stay in sync.

@@ -12,17 +12,21 @@ Personal DeFi command center focused on Base-native incentives, ve-token governa
 ## Getting Started
 1. Install dependencies: `npm install`
 2. Copy `.env.example` to `.env` and provide strong secrets for Postgres and API keys as needed.
-3. Start Postgres (Docker Desktop required): `docker compose up -d postgres`
+3. Start Postgres (Docker Desktop required): `npm run db:up`
 4. Push the Prisma schema to your database: `npm run db:push`
 5. Generate the Prisma client (if needed): `npm run db:generate`
-6. Seed balances (optional, requires API keys): `npm run sync:balances`
-7. Sync governance data (optional, requires governance API access): `npm run sync:governance`
-8. Sync reward opportunities (optional, requires protocol APIs): `npm run sync:rewards`
-9. Sync Gammaswap positions (optional): `npm run sync:gammaswap`
-10. Run services in parallel (recommended in separate terminals):
-   - `npm run dev:api`
-   - `npm run dev:web`
-10. Visit `http://localhost:3000` for the web experience. The API listens on `http://localhost:4000` by default.
+6. Launch both API and web servers in one terminal: `npm run dev:all`
+7. Visit `http://localhost:3000` for the web experience. The API listens on `http://localhost:4000` by default.
+
+Optional data hydrations (requires API keys):
+- `npm run sync:balances`
+- `npm run sync:governance`
+- `npm run sync:rewards`
+- `npm run sync:gammaswap`
+
+To stop services:
+- `Ctrl+C` in the dev terminal to stop the app servers.
+- `npm run db:down` to stop/remove the Postgres container (data persisted in the `postgres-data` volume).
 
 ## Tooling Highlights
 - TypeScript across the stack.

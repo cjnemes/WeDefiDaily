@@ -489,10 +489,10 @@ export function Watchlist() {
       );
     }
 
-    if (error) {
-      return (
+   if (error) {
+     return (
         <div className="rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-6 text-center text-sm text-red-500">
-          Failed to load price alerts.{' '}
+          Failed to load price alerts{error instanceof Error && error.message ? `: ${error.message}` : ''}.{' '}
           <button
             type="button"
             onClick={() => refetch()}

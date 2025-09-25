@@ -6,7 +6,10 @@ import { serializeAlert } from './alerts';
 const now = new Date('2025-09-21T00:00:00.000Z');
 
 function createDecimal(value: string | number) {
-  return new Prisma.Decimal(value);
+  const stringified = value.toString();
+  return {
+    toString: () => stringified,
+  } as unknown as Prisma.Decimal;
 }
 
 describe('serializeAlert', () => {
