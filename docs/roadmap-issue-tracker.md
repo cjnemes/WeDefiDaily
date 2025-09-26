@@ -24,12 +24,8 @@ Map each roadmap bullet to a GitHub issue so progress and reviews stay traceable
 | Phase 4 | Gammaswap health trend insight | [#35](https://github.com/cjnemes/WeDefiDaily/issues/35) | ✅ Done (PR #39) |
 | Phase 4 | Intelligence alerts integration | [PR #39](https://github.com/cjnemes/WeDefiDaily/pull/39) | ✅ Merged |
 
-| Phase 5 | P&L and performance tracking | TBD | 📝 Planning |
-| Phase 5 | Historical price deltas (24h/7d) | TBD | 📝 Planning |
-| Phase 5 | Transaction history & cost basis | TBD | 📝 Planning |
-| Phase 5 | Liquidity analytics integration | TBD | 📝 Planning |
-| Phase 5 | Pool depth & TVL metrics | TBD | 📝 Planning |
-| Phase 5 | Impermanent loss calculations | TBD | 📝 Planning |
-| Phase 5 | Cross-position risk correlation | TBD | 📝 Planning |
+| Phase 5a | P&L and performance tracking | [#41](https://github.com/cjnemes/WeDefiDaily/issues/41) | 📝 Planning |
+| Phase 5b | Liquidity analytics integration | [#42](https://github.com/cjnemes/WeDefiDaily/issues/42) | 📝 Planning |
+| Phase 5c | Advanced risk analytics | [#43](https://github.com/cjnemes/WeDefiDaily/issues/43) | 📝 Planning |
 
 Update this table whenever you open/close issues so the roadmap and GitHub board stay in sync.
