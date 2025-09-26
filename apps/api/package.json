@@ -25,6 +25,7 @@
     "sync:gammaswap": "dotenv -e ../../.env -- tsx src/jobs/sync-gammaswap.ts",
     "sync:performance": "dotenv -e ../../.env -- tsx src/jobs/sync-performance.ts",
     "calculate:performance": "dotenv -e ../../.env -- tsx src/jobs/calculate-performance.ts",
+    "calculate:risk-analytics": "dotenv -e ../../.env -- tsx src/jobs/calculate-risk-analytics.ts",
     "process:alerts": "dotenv -e ../../.env -- tsx src/jobs/process-alerts.ts",
     "generate:digest": "dotenv -e ../../.env -- tsx src/jobs/generate-digest.ts",
     "check:price-thresholds": "dotenv -e ../../.env -- tsx src/jobs/check-price-thresholds.ts"

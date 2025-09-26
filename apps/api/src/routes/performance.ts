@@ -40,12 +40,10 @@ export const performanceRoutes: FastifyPluginCallback = (app, _opts, done) => {
 
     try {
       // First check if we have cached metrics
-      // @ts-expect-error - Prisma compound unique key with nullable field issue
       const cachedMetrics = await prisma.performanceMetric.findUnique({
         where: {
           walletId_timeframe: {
-            // @ts-expect-error - nullable compound key
-            walletId: walletId || null,
+            walletId,
             timeframe,
           },
         },

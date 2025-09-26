@@ -580,3 +580,157 @@ export function fetchPortfolioSnapshots(params?: {
   const query = searchParams.toString() ? `?${searchParams.toString()}` : '';
   return fetchApi<PortfolioSnapshotsResponse>(`/v1/performance/snapshots${query}`);
 }
+
+// Risk Analytics API
+export interface CorrelationPair {
+  token1Id: string;
+  token1Symbol: string;
+  token2Id: string;
+  token2Symbol: string;
+  correlation: string;
+  pValue: string | null;
+  sampleSize: number;
+  riskImplication: 'diversified' | 'moderate' | 'concentrated' | 'extreme';
+}
+
+export interface CorrelationMatrix {
+  walletId: string | null;
+  timeframe: '7d' | '30d' | '90d' | '1y';
+  pairs: CorrelationPair[];
+  summary: {
+    totalPairs: number;
+    averageCorrelation: string;
+    highCorrelationPairs: number;
+    diversificationScore: string;
+  };
+}
+
+export interface ProtocolExposure {
+  protocol: string;
+  totalValueUsd: string;
+  percentageOfPortfolio: string;
+  positionCount: number;
+  riskLevel: 'low' | 'medium' | 'high' | 'extreme';
+}
+
+export interface VolatilityMetric {
+  tokenId: string;
+  tokenSymbol: string;
+  dailyVolatility: string;
+  annualizedVolatility: string;
+  averageReturn: string;
+  minReturn: string;
+  maxReturn: string;
+  dataPoints: number;
+  riskLevel: 'low' | 'medium' | 'high' | 'extreme';
+}
+
+export interface RiskAnalyticsDashboard {
+  correlationMatrix: CorrelationMatrix | null;
+  protocolExposure: ProtocolExposure[];
+  volatilityMetrics: VolatilityMetric[];
+  summary: {
+    totalProtocols: number;
+    totalCorrelations: number;
+    totalTokensAnalyzed: number;
+    highRiskExposures: number;
+  };
+}
+
+export interface CorrelationMatrixResponse {
+  success: boolean;
+  data: CorrelationMatrix;
+  metadata: {
+    walletId: string;
+    timeframe: string;
+    calculatedAt: string;
+  };
+}
+
+export interface ProtocolExposureResponse {
+  success: boolean;
+  data: ProtocolExposure[];
+  metadata: {
+    walletId: string;
+    totalProtocols: number;
+    calculatedAt: string;
+  };
+}
+
+export interface VolatilityAnalysisResponse {
+  success: boolean;
+  data: VolatilityMetric[];
+  metadata: {
+    walletId: string;
+    timeframe: string;
+    totalTokens: number;
+    calculatedAt: string;
+  };
+}
+
+export interface RiskAnalyticsDashboardResponse {
+  success: boolean;
+  data: RiskAnalyticsDashboard;
+  metadata: {
+    walletId: string;
+    timeframe: string;
+    calculatedAt: string;
+    warnings: string[];
+  };
+}
+
+export function fetchCorrelationMatrix(params?: {
+  walletId?: string;
+  timeframe?: '7d' | '30d' | '90d' | '1y';
+  minCorrelation?: number;
+  maxCorrelation?: number;
+}) {
+  const searchParams = new URLSearchParams();
+  if (params?.walletId) searchParams.append('walletId', params.walletId);
+  if (params?.timeframe) searchParams.append('timeframe', params.timeframe);
+  if (params?.minCorrelation !== undefined) searchParams.append('minCorrelation', params.minCorrelation.toString());
+  if (params?.maxCorrelation !== undefined) searchParams.append('maxCorrelation', params.maxCorrelation.toString());
+
+  const query = searchParams.toString() ? `?${searchParams.toString()}` : '';
+  return fetchApi<CorrelationMatrixResponse>(`/v1/risk-analytics/correlation-matrix${query}`);
+}
+
+export function fetchProtocolExposure(params?: {
+  walletId?: string;
+  minExposure?: number;
+  riskLevel?: 'low' | 'medium' | 'high' | 'extreme';
+}) {
+  const searchParams = new URLSearchParams();
+  if (params?.walletId) searchParams.append('walletId', params.walletId);
+  if (params?.minExposure !== undefined) searchParams.append('minExposure', params.minExposure.toString());
+  if (params?.riskLevel) searchParams.append('riskLevel', params.riskLevel);
+
+  const query = searchParams.toString() ? `?${searchParams.toString()}` : '';
+  return fetchApi<ProtocolExposureResponse>(`/v1/risk-analytics/protocol-exposure${query}`);
+}
+
+export function fetchVolatilityAnalysis(params?: {
+  walletId?: string;
+  timeframe?: '7d' | '30d' | '90d' | '1y';
+  riskLevel?: 'low' | 'medium' | 'high' | 'extreme';
+}) {
+  const searchParams = new URLSearchParams();
+  if (params?.walletId) searchParams.append('walletId', params.walletId);
+  if (params?.timeframe) searchParams.append('timeframe', params.timeframe);
+  if (params?.riskLevel) searchParams.append('riskLevel', params.riskLevel);
+
+  const query = searchParams.toString() ? `?${searchParams.toString()}` : '';
+  return fetchApi<VolatilityAnalysisResponse>(`/v1/risk-analytics/volatility${query}`);
+}
+
+export function fetchRiskAnalyticsDashboard(params?: {
+  walletId?: string;
+  timeframe?: '7d' | '30d' | '90d' | '1y';
+}) {
+  const searchParams = new URLSearchParams();
+  if (params?.walletId) searchParams.append('walletId', params.walletId);
+  if (params?.timeframe) searchParams.append('timeframe', params.timeframe);
+
+  const query = searchParams.toString() ? `?${searchParams.toString()}` : '';
+  return fetchApi<RiskAnalyticsDashboardResponse>(`/v1/risk-analytics/dashboard${query}`);
+}

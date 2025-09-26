@@ -22,6 +22,7 @@
     "sync:gammaswap": "npm run sync:gammaswap --workspace @wedefidaily/api",
     "sync:performance": "npm run sync:performance --workspace @wedefidaily/api",
     "calculate:performance": "npm run calculate:performance --workspace @wedefidaily/api",
+    "calculate:risk-analytics": "npm run calculate:risk-analytics --workspace @wedefidaily/api",
     "process:alerts": "npm run process:alerts --workspace @wedefidaily/api",
     "generate:digest": "npm run generate:digest --workspace @wedefidaily/api",
     "check:price-thresholds": "npm run check:price-thresholds --workspace @wedefidaily/api"

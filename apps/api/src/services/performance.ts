@@ -284,12 +284,10 @@ export async function storePerformanceMetrics(
   timeframe: string,
   performance: PerformanceData
 ): Promise<void> {
-  // @ts-expect-error - Prisma compound unique key with nullable field issue
   await prisma.performanceMetric.upsert({
     where: {
       walletId_timeframe: {
-        // @ts-expect-error - nullable compound key
-        walletId: walletId || null,
+        walletId,
         timeframe,
       },
     },

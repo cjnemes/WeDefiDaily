@@ -44,6 +44,11 @@ model Wallet {
   portfolioSnapshots  PortfolioSnapshot[]
   positionSnapshots   PositionSnapshot[]
   performanceMetrics  PerformanceMetric[]
+  protocolExposures   ProtocolExposure[]
+  volatilityMetrics   VolatilityMetric[]
+  valueAtRisks        ValueAtRisk[]
+  riskAdjustedMetrics RiskAdjustedMetric[]
+  riskEvents          RiskEvent[]
 
   @@unique([address, chainId], map: "wallet_address_chain_unique")
 }
@@ -69,6 +74,7 @@ model Protocol {
   alerts              Alert[]
   transactions        Transaction[]
   positionSnapshots   PositionSnapshot[]
+  protocolExposures   ProtocolExposure[]
 }
 
 model Token {
@@ -96,6 +102,9 @@ model Token {
   priceThresholds     PriceThreshold[] @relation("PriceThresholdToken")
   transactions        Transaction[]
   positionSnapshots   PositionSnapshot[]
+  assetCorrelations1  AssetCorrelation[] @relation("AssetCorrelationToken1")
+  assetCorrelations2  AssetCorrelation[] @relation("AssetCorrelationToken2")
+  volatilityMetrics   VolatilityMetric[]
 
   @@unique([chainId, address], map: "token_chain_address_unique")
 }
@@ -372,6 +381,7 @@ model Alert {
   tokenId             String?
   rewardOpportunityId String?
   gammaswapPositionId String?
+  riskEventId         String?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
@@ -380,6 +390,7 @@ model Alert {
   token             Token?             @relation(fields: [tokenId], references: [id], onDelete: SetNull)
   rewardOpportunity RewardOpportunity? @relation(fields: [rewardOpportunityId], references: [id], onDelete: SetNull)
   gammaswapPosition GammaswapPosition? @relation(fields: [gammaswapPositionId], references: [id], onDelete: SetNull)
+  riskEvent         RiskEvent?         @relation("RiskEventAlert", fields: [riskEventId], references: [id], onDelete: SetNull)
   deliveries        AlertDelivery[]
 
   @@index([status])
@@ -517,4 +528,140 @@ model PerformanceMetric {
   @@unique([walletId, timeframe], map: "performance_metric_wallet_timeframe_unique")
   @@index([walletId, computedAt])
   @@index([timeframe])
+}
+
+model AssetCorrelation {
+  id                String   @id @default(uuid())
+  token1Id          String
+  token2Id          String
+  timeframe         String   @db.VarChar(16) // "7d", "30d", "90d", "1y"
+  correlation       Decimal  @db.Decimal(10, 8) // -1.00000000 to 1.00000000
+  pValue            Decimal? @db.Decimal(10, 8) // statistical significance
+  sampleSize        Int
+  computedAt        DateTime @default(now())
+  metadata          Json?
+
+  token1            Token    @relation("AssetCorrelationToken1", fields: [token1Id], references: [id], onDelete: Cascade)
+  token2            Token    @relation("AssetCorrelationToken2", fields: [token2Id], references: [id], onDelete: Cascade)
+
+  @@unique([token1Id, token2Id, timeframe], map: "asset_correlation_unique")
+  @@index([token1Id, computedAt])
+  @@index([token2Id, computedAt])
+  @@index([correlation])
+}
+
+model ProtocolExposure {
+  id                    String   @id @default(uuid())
+  walletId              String?  // null = all wallets combined
+  protocolId            String
+  totalExposureUsd      Decimal  @db.Decimal(36, 18)
+  exposurePercentage    Decimal  @db.Decimal(10, 4) // percentage of total portfolio
+  concentrationRisk     String   @db.VarChar(16) // "low", "medium", "high", "critical"
+  liquidityRisk         String   @db.VarChar(16) // "low", "medium", "high", "critical"
+  smartContractRisk     String   @db.VarChar(16) // "low", "medium", "high", "critical"
+  overallRiskScore      Decimal  @db.Decimal(5, 2) // 0.00 to 100.00
+  recommendedAllocation Decimal? @db.Decimal(10, 4) // suggested percentage
+  computedAt            DateTime @default(now())
+  metadata              Json?
+
+  wallet                Wallet?  @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  protocol              Protocol @relation(fields: [protocolId], references: [id], onDelete: Cascade)
+
+  @@unique([walletId, protocolId], map: "protocol_exposure_wallet_protocol_unique")
+  @@index([walletId, computedAt])
+  @@index([protocolId, computedAt])
+  @@index([overallRiskScore])
+  @@index([concentrationRisk])
+}
+
+model VolatilityMetric {
+  id                String   @id @default(uuid())
+  tokenId           String
+  walletId          String?  // null = all wallets combined
+  timeframe         String   @db.VarChar(16) // "7d", "30d", "90d", "1y"
+  volatility        Decimal  @db.Decimal(10, 6) // annualized volatility
+  rollingVolatility Decimal  @db.Decimal(10, 6) // 30-day rolling volatility
+  upsideDeviation   Decimal? @db.Decimal(10, 6)
+  downsideDeviation Decimal? @db.Decimal(10, 6)
+  skewness          Decimal? @db.Decimal(10, 6)
+  kurtosis          Decimal? @db.Decimal(10, 6)
+  beta              Decimal? @db.Decimal(10, 6) // market beta (vs ETH)
+  computedAt        DateTime @default(now())
+  metadata          Json?
+
+  token             Token    @relation(fields: [tokenId], references: [id], onDelete: Cascade)
+  wallet            Wallet?  @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@unique([tokenId, walletId, timeframe], map: "volatility_metric_unique")
+  @@index([tokenId, computedAt])
+  @@index([walletId, computedAt])
+  @@index([volatility])
+  @@index([beta])
+}
+
+model ValueAtRisk {
+  id               String   @id @default(uuid())
+  walletId         String?  // null = all wallets combined
+  timeframe        String   @db.VarChar(16) // "1d", "7d", "30d"
+  confidenceLevel  Decimal  @db.Decimal(5, 4) // 0.9500, 0.9900, 0.9950
+  varAmount        Decimal  @db.Decimal(36, 18) // VaR in USD
+  varPercentage    Decimal  @db.Decimal(10, 6) // VaR as % of portfolio
+  expectedShortfall Decimal? @db.Decimal(36, 18) // Conditional VaR (CVaR)
+  method           String   @db.VarChar(32) // "historical", "parametric", "monte_carlo"
+  computedAt       DateTime @default(now())
+  metadata         Json?
+
+  wallet           Wallet?  @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@unique([walletId, timeframe, confidenceLevel], map: "value_at_risk_unique")
+  @@index([walletId, computedAt])
+  @@index([varPercentage])
+  @@index([confidenceLevel])
+}
+
+model RiskAdjustedMetric {
+  id                String   @id @default(uuid())
+  walletId          String?  // null = all wallets combined
+  timeframe         String   @db.VarChar(16) // "30d", "90d", "1y", "all"
+  sharpeRatio       Decimal? @db.Decimal(10, 6)
+  sortinoRatio      Decimal? @db.Decimal(10, 6) // downside risk adjusted
+  calmarRatio       Decimal? @db.Decimal(10, 6) // max drawdown adjusted
+  informationRatio  Decimal? @db.Decimal(10, 6) // vs benchmark
+  treynorRatio      Decimal? @db.Decimal(10, 6) // systematic risk adjusted
+  jensenAlpha       Decimal? @db.Decimal(10, 6) // excess return vs CAPM
+  trackingError     Decimal? @db.Decimal(10, 6) // standard deviation vs benchmark
+  benchmarkReturn   Decimal? @db.Decimal(10, 6) // benchmark comparison
+  computedAt        DateTime @default(now())
+  metadata          Json?
+
+  wallet            Wallet?  @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@unique([walletId, timeframe], map: "risk_adjusted_metric_unique")
+  @@index([walletId, computedAt])
+  @@index([timeframe])
+  @@index([sharpeRatio])
+  @@index([sortinoRatio])
+}
+
+model RiskEvent {
+  id                String   @id @default(uuid())
+  walletId          String?
+  eventType         String   @db.VarChar(64) // "correlation_spike", "exposure_breach", "volatility_spike", "var_breach"
+  severity          String   @db.VarChar(16) // "low", "medium", "high", "critical"
+  threshold         Decimal? @db.Decimal(36, 18)
+  actualValue       Decimal? @db.Decimal(36, 18)
+  description       String
+  recommendation    String?
+  isActive          Boolean  @default(true)
+  resolvedAt        DateTime?
+  metadata          Json?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  wallet            Wallet?  @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  alerts            Alert[]  @relation("RiskEventAlert")
+
+  @@index([walletId, createdAt])
+  @@index([eventType, severity])
+  @@index([isActive])
 }

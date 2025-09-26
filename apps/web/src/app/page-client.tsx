@@ -166,6 +166,12 @@ export function DashboardClient() {
           >
             Manage Wallets →
           </Link>
+          <Link
+            href="/risk-analytics"
+            className="rounded-lg bg-foreground/10 px-4 py-2 text-sm hover:bg-foreground/20 transition-colors"
+          >
+            Risk Analytics →
+          </Link>
           <button
             className="rounded-lg bg-blue-500 px-4 py-2 text-sm text-white hover:bg-blue-600 transition-colors"
           >
