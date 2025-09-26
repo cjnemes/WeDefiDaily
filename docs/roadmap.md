@@ -5,7 +5,8 @@
 - ✅ **Phase 1 – Core Data Infrastructure**: Data adapters, portfolio/governance endpoints, and dashboard tiles are live.
 - ✅ **Phase 2 – Protocol Modules**: Yield tracker, governance modules, and Gammaswap integration with risk assessment complete.
 - ✅ **Phase 3 – Alerts & UX Polish**: Watchlist, digest, and governance dashboards validated; external integrations intentionally deferred.
-- 📝 **Phase 4 – Intelligence Experiments**: Planning underway (see docs/plans/phase-4-intelligence.md).
+- ✅ **Phase 4 – Intelligence Experiments**: Intelligence alerts implemented (PR #39), generating insights from historical data.
+- 🚧 **Phase 5 – Critical Feature Gaps**: P&L tracking, performance metrics, liquidity insights (planning).
 
 ## Near-Term Focus
 
@@ -31,19 +32,47 @@
 - ✅ Watchlist polish: API integration, modal UX, responsive design (issue #26)
 - ✅ Docs: validation runbooks, QA evidence, digest workflow instructions
 
-### Phase 4 – Intelligence Experiments (Backlog)
-See `docs/plans/phase-4-intelligence.md` for strategy. Initial tasks:
-- Balance delta highlights ([#32](https://github.com/cjnemes/WeDefiDaily/issues/32))
-- Governance unlock reminders ([#33](https://github.com/cjnemes/WeDefiDaily/issues/33))
-- Reward decay monitor ([#34](https://github.com/cjnemes/WeDefiDaily/issues/34))
-- Gammaswap health trend insight ([#35](https://github.com/cjnemes/WeDefiDaily/issues/35))
+### Phase 4 – Intelligence Experiments (✅ Complete)
+See `docs/plans/phase-4-intelligence.md` for strategy. Completed tasks:
+- ✅ Balance delta highlights ([#32](https://github.com/cjnemes/WeDefiDaily/issues/32))
+- ✅ Governance unlock reminders ([#33](https://github.com/cjnemes/WeDefiDaily/issues/33))
+- ✅ Reward decay monitor ([#34](https://github.com/cjnemes/WeDefiDaily/issues/34))
+- ✅ Gammaswap health trend insight ([#35](https://github.com/cjnemes/WeDefiDaily/issues/35))
+
+### Phase 5 – Critical Feature Gaps (Planning)
+Addressing missing PRD functionality:
+- **P&L & Performance Tracking** (2 weeks)
+  - Historical price snapshots and 24h/7d delta calculations
+  - Transaction history tracking with cost basis
+  - Portfolio performance metrics with chart visualizations
+  - API endpoints for historical data queries
+
+- **Liquidity & Trading Analytics** (2 weeks)
+  - Pool depth and liquidity metrics from Aerodrome/Uniswap
+  - Position size relative to pool TVL
+  - Slippage estimates and optimal routing
+  - Impermanent loss calculations for LP positions
+
+- **Advanced Risk Analytics** (1 week)
+  - Cross-position correlation analysis
+  - Protocol exposure concentration warnings
+  - Historical volatility tracking
+  - Risk-adjusted return metrics
 
 ## Long-Range Exploration
 
-### Phase 4 – Intelligence (3+ weeks)
-- Phase 4 plan document captured with heuristics + follow-ups (docs/plans/phase-4-intelligence.md)
-- Four backlog issues created for initial heuristics (#32–#35)
+### Phase 4 – Intelligence (✅ Complete)
+- ✅ Intelligence alerts implementation merged (PR #39)
+- ✅ All four initial heuristics completed (#32–#35)
+- ✅ Integrated with digest generation pipeline
 - Stretch goals (ROI simulations, scenario planner) remain on umbrella issue #20.
+
+### Phase 5 – Critical Gaps (5-6 weeks)
+- Implement historical price tracking and performance deltas
+- Build transaction history and P&L calculation engine
+- Add liquidity analytics and pool metrics integration
+- Create advanced risk correlation analysis
+- Deliver missing PRD user stories (US #3, #7)
 
 ## Enablers & Ongoing Workstreams
 - Add integration tests around governance sync (mock fetch responses).

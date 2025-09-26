@@ -9,32 +9,32 @@
 
 ## Functional Requirements
 1. **Portfolio Snapshot**
-   - Aggregate balances per chain and protocol with USD valuations.
-   - Break down holdings by type: liquid assets, locked ve positions, staked LPs, pending rewards.
-   - Display performance deltas (24h/7d) using market data from CoinMarketCap/CoinGecko.
+   - ✅ Aggregate balances per chain and protocol with USD valuations.
+   - ✅ Break down holdings by type: liquid assets, locked ve positions, staked LPs, pending rewards.
+   - ❌ Display performance deltas (24h/7d) using market data from CoinMarketCap/CoinGecko.
 
 2. **Reward & Claim Tracker**
-   - Detect unclaimed rewards for Aerodrome gauges, Gammaswap emissions, and other supported farms.
-   - Show claimable amount, estimated USD value, and gas cost estimate per chain (Etherscan/Alchemy data).
-   - Provide reminders for claim deadlines or epochs.
+   - ✅ Detect unclaimed rewards for Aerodrome gauges, Gammaswap emissions, and other supported farms.
+   - ✅ Show claimable amount, estimated USD value, and gas cost estimate per chain (Etherscan/Alchemy data).
+   - ✅ Provide reminders for claim deadlines or epochs.
 
 3. **Vote Escrow Management**
-   - Visualize current veAERO and veTHE positions (lock amount, unlock date, voting power).
-   - Pull current gauge/bribe data and show ROI comparisons to guide vote allocations.
-   - Track upcoming governance votes or bribe deadlines and allow exporting a recommended voting plan.
+   - ✅ Visualize current veAERO and veTHE positions (lock amount, unlock date, voting power).
+   - ✅ Pull current gauge/bribe data and show ROI comparisons to guide vote allocations.
+   - ✅ Track upcoming governance votes or bribe deadlines and allow exporting a recommended voting plan.
 
 4. **Trading Outlook**
-   - Maintain a watchlist of target tokens, pulling price, volume, and volatility metrics.
-   - Surface liquidity insights (e.g., top pools on Aerodrome) and show your positions relative to pool totals.
-   - Integrate basic risk alerts (large price swings, pool imbalance, funding changes where available).
+   - ✅ Maintain a watchlist of target tokens, pulling price, volume, and volatility metrics.
+   - ❌ Surface liquidity insights (e.g., top pools on Aerodrome) and show your positions relative to pool totals.
+   - ✅ Integrate basic risk alerts (large price swings, pool imbalance, funding changes where available).
 
 5. **Alerting Layer**
-   - Support configurable alerts (e.g., Telegram, email, CLI notifications) for claims due, unlock windows, and price thresholds.
-   - Maintain audit logs to review alert triggers and acknowledgements.
+   - ✅ Support configurable alerts (e.g., Telegram, email, CLI notifications) for claims due, unlock windows, and price thresholds.
+   - ✅ Maintain audit logs to review alert triggers and acknowledgements.
 
 6. **Reporting**
-   - Generate a daily digest summarizing portfolio value, pending actions, and new opportunities.
-   - Allow export to Markdown/CSV for record keeping.
+   - ✅ Generate a daily digest summarizing portfolio value, pending actions, and new opportunities.
+   - ✅ Allow export to Markdown/CSV for record keeping.
 
 ## Non-Functional Requirements
 - **Performance**: Primary dashboard loads within 3 seconds with cached data; real-time refreshes complete within API rate limits.
