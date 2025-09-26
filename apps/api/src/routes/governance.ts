@@ -1,5 +1,6 @@
 import Decimal from 'decimal.js';
 import type { FastifyPluginCallback } from 'fastify';
+import { Prisma } from '@prisma/client';
 
 const HUNDRED = new Decimal(100);
 
@@ -15,7 +16,8 @@ function formatDecimal(value: Decimal | null | undefined) {
 
 export const governanceRoutes: FastifyPluginCallback = (app, _opts, done) => {
   app.get('/', async (_request, reply) => {
-    const locks = await app.prisma.governanceLock.findMany({
+    try {
+      const locks = await app.prisma.governanceLock.findMany({
       include: {
         wallet: {
           select: {
@@ -34,10 +36,10 @@ export const governanceRoutes: FastifyPluginCallback = (app, _opts, done) => {
       orderBy: { updatedAt: 'desc' },
     });
 
-    const lockSummaries = locks.map((lock) => {
-      const latestSnapshot = lock.voteSnapshots.length > 0 ? lock.voteSnapshots[0] : null;
-      return {
-        id: lock.id,
+      const lockSummaries = locks.map((lock) => {
+        const latestSnapshot = lock.voteSnapshots.length > 0 ? lock.voteSnapshots[0] : null;
+        return {
+          id: lock.id,
         protocol: {
           id: lock.protocol.id,
           name: lock.protocol.name,
@@ -63,13 +65,13 @@ export const governanceRoutes: FastifyPluginCallback = (app, _opts, done) => {
       };
     });
 
-    const now = new Date();
-    const upcomingEpochs = await app.prisma.voteEpoch.findMany({
-      where: {
-        endsAt: {
-          gte: new Date(now.getTime() - 24 * 60 * 60 * 1000),
+      const now = new Date();
+      const upcomingEpochs = await app.prisma.voteEpoch.findMany({
+        where: {
+          endsAt: {
+            gte: new Date(now.getTime() - 24 * 60 * 60 * 1000),
+          },
         },
-      },
       include: {
         protocol: true,
       },
@@ -77,10 +79,10 @@ export const governanceRoutes: FastifyPluginCallback = (app, _opts, done) => {
       take: 10,
     });
 
-    const epochs = upcomingEpochs.map((epoch) => ({
-      id: epoch.id,
-      protocol: {
-        id: epoch.protocol.id,
+      const epochs = upcomingEpochs.map((epoch) => ({
+        id: epoch.id,
+        protocol: {
+          id: epoch.protocol.id,
         name: epoch.protocol.name,
         slug: epoch.protocol.slug,
       },
@@ -90,11 +92,11 @@ export const governanceRoutes: FastifyPluginCallback = (app, _opts, done) => {
       snapshotAt: epoch.snapshotAt?.toISOString() ?? null,
     }));
 
-    const bribes = await app.prisma.bribe.findMany({
-      include: {
-        gauge: {
-          include: {
-            protocol: true,
+      const bribes = await app.prisma.bribe.findMany({
+        include: {
+          gauge: {
+            include: {
+              protocol: true,
           },
         },
         epoch: true,
@@ -107,10 +109,10 @@ export const governanceRoutes: FastifyPluginCallback = (app, _opts, done) => {
       take: 25,
     });
 
-    const bribeSummaries = bribes.map((bribe) => {
-      const rewardAmount = new Decimal(bribe.rewardAmount.toString());
-      const rewardValue = bribe.rewardValueUsd ? new Decimal(bribe.rewardValueUsd.toString()) : null;
-      const totalVotes = bribe.totalVotes ? new Decimal(bribe.totalVotes.toString()) : null;
+      const bribeSummaries = bribes.map((bribe) => {
+        const rewardAmount = new Decimal(bribe.rewardAmount.toString());
+        const rewardValue = bribe.rewardValueUsd ? new Decimal(bribe.rewardValueUsd.toString()) : null;
+        const totalVotes = bribe.totalVotes ? new Decimal(bribe.totalVotes.toString()) : null;
 
       let roiPercentage: Decimal | null = null;
       if (bribe.roiPercentage) {
@@ -152,16 +154,29 @@ export const governanceRoutes: FastifyPluginCallback = (app, _opts, done) => {
       };
     });
 
-    return reply.send({
-      data: {
-        locks: lockSummaries,
-        bribes: bribeSummaries,
-        epochs,
-      },
-      meta: {
-        generatedAt: new Date().toISOString(),
-      },
-    });
+      return reply.send({
+        data: {
+          locks: lockSummaries,
+          bribes: bribeSummaries,
+          epochs,
+        },
+        meta: {
+          generatedAt: new Date().toISOString(),
+        },
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2021') {
+        return reply.status(500).send({
+          error: 'SCHEMA_MISMATCH',
+          message: 'Missing tables for governance data. Run `npm run prisma:db:push --workspace @wedefidaily/api` to sync the database schema.',
+        });
+      }
+      app.log.error(error, 'failed to load governance data');
+      return reply.status(500).send({
+        error: 'UNEXPECTED_ERROR',
+        message: error instanceof Error ? error.message : 'Failed to load governance data. Check API logs for details.',
+      });
+    }
   });
 
   app.post('/sync', async (_request, reply) => {
