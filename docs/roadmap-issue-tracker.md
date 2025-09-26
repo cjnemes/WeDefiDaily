@@ -24,7 +24,7 @@ Map each roadmap bullet to a GitHub issue so progress and reviews stay traceable
 | Phase 4 | Gammaswap health trend insight | [#35](https://github.com/cjnemes/WeDefiDaily/issues/35) | ✅ Done (PR #39) |
 | Phase 4 | Intelligence alerts integration | [PR #39](https://github.com/cjnemes/WeDefiDaily/pull/39) | ✅ Merged |
 
-| Phase 5a | P&L and performance tracking | [#41](https://github.com/cjnemes/WeDefiDaily/issues/41) | 📝 Planning |
+| Phase 5a | P&L and performance tracking | [#41](https://github.com/cjnemes/WeDefiDaily/issues/41) | ✅ Done |
 | Phase 5b | Liquidity analytics integration | [#42](https://github.com/cjnemes/WeDefiDaily/issues/42) | 📝 Planning |
 | Phase 5c | Advanced risk analytics | [#43](https://github.com/cjnemes/WeDefiDaily/issues/43) | 📝 Planning |
 

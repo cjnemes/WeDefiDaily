@@ -6,6 +6,7 @@ import { Watchlist } from '@/components/watchlist';
 import {
   fetchPortfolio,
   fetchGovernance,
+  fetchPerformanceMetrics,
 } from '@/lib/api';
 
 // Import formatting functions and types
@@ -13,6 +14,7 @@ import {
   formatCurrency,
   formatQuantity,
   formatCountdown,
+  formatPercentage,
   shortenAddress,
 } from '@/lib/format';
 
@@ -60,6 +62,11 @@ export function DashboardClient() {
     queryFn: fetchGovernance,
   });
 
+  const { data: performance } = useQuery({
+    queryKey: ['performance', '24h'],
+    queryFn: () => fetchPerformanceMetrics({ timeframe: '24h' }),
+  });
+
   const totalUsd = portfolio ? formatCurrency(portfolio.meta.totalUsd, "—") : "—";
   const wallets = portfolio?.data ?? [];
 
@@ -94,12 +101,31 @@ export function DashboardClient() {
           </p>
         </div>
 
-        <div className="grid gap-4 rounded-2xl border border-foreground/10 bg-foreground/5 p-6 sm:grid-cols-3">
+        <div className="grid gap-4 rounded-2xl border border-foreground/10 bg-foreground/5 p-6 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <p className="text-xs uppercase tracking-[0.24em] text-foreground/50">
               Total Portfolio Value
             </p>
             <p className="mt-2 text-3xl font-semibold text-foreground">{totalUsd}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-[0.24em] text-foreground/50">
+              24h Performance
+            </p>
+            <p className={`mt-2 text-2xl font-semibold ${
+              performance?.data && parseFloat(performance.data.totalReturnPercent) >= 0
+                ? 'text-green-500'
+                : 'text-red-500'
+            }`}>
+              {performance?.data ? formatPercentage(performance.data.totalReturnPercent) : '—'}
+            </p>
+            <p className={`text-sm ${
+              performance?.data && parseFloat(performance.data.totalReturn) >= 0
+                ? 'text-green-500'
+                : 'text-red-500'
+            }`}>
+              {performance?.data ? formatCurrency(performance.data.totalReturn) : '—'}
+            </p>
           </div>
           <div>
             <p className="text-xs uppercase tracking-[0.24em] text-foreground/50">
@@ -115,7 +141,7 @@ export function DashboardClient() {
               <span>Refresh commands:</span>
               <code className="rounded bg-foreground/10 px-1 py-0.5">npm run sync:balances</code>
               <span>·</span>
-              <code className="rounded bg-foreground/10 px-1 py-0.5">npm run sync:governance</code>
+              <code className="rounded bg-foreground/10 px-1 py-0.5">npm run sync:performance</code>
             </p>
           </div>
         </div>
@@ -127,6 +153,12 @@ export function DashboardClient() {
             className="rounded-lg bg-foreground/10 px-4 py-2 text-sm hover:bg-foreground/20 transition-colors"
           >
             Governance Dashboard →
+          </Link>
+          <Link
+            href="/performance"
+            className="rounded-lg bg-foreground/10 px-4 py-2 text-sm hover:bg-foreground/20 transition-colors"
+          >
+            Performance Analytics →
           </Link>
           <Link
             href="/wallets"

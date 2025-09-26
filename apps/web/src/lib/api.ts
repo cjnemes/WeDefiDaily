@@ -447,3 +447,136 @@ export function searchTokens(params: { search?: string; limit?: number }) {
   const query = searchParams.toString() ? `?${searchParams.toString()}` : '';
   return fetchApi<TokenSearchResponse>(`/v1/tokens${query}`);
 }
+
+// Performance API
+export interface PerformanceMetrics {
+  walletId: string | null;
+  timeframe: '24h' | '7d' | '30d' | '90d' | '1y' | 'all';
+  totalReturn: string;
+  totalReturnPercent: string;
+  realizedPnl: string;
+  unrealizedPnl: string;
+  sharpeRatio: string;
+  maxDrawdown: string;
+  volatility: string;
+  winRate: string;
+  tradesCount: number;
+  computedAt: string;
+}
+
+export interface PerformanceMetricsResponse {
+  data: PerformanceMetrics;
+}
+
+export interface PortfolioHistoryPoint {
+  date: string;
+  value: string;
+}
+
+export interface PortfolioHistoryResponse {
+  data: PortfolioHistoryPoint[];
+  meta: {
+    walletId: string | null;
+    timeframe: string;
+    pointsCount: number;
+  };
+}
+
+export interface TokenPriceChange {
+  tokenId: string;
+  symbol: string;
+  currentPrice: string;
+  previousPrice: string;
+  changePercent: string;
+  changeUsd: string;
+}
+
+export interface TokenPriceChangesResponse {
+  data: TokenPriceChange[];
+  meta: {
+    walletId: string | null;
+    timeframe: string;
+    tokensCount: number;
+  };
+}
+
+export interface PortfolioSnapshot {
+  id: string;
+  walletId: string | null;
+  totalUsdValue: string;
+  totalUsdValueChange24h: string | null;
+  totalUsdValueChange7d: string | null;
+  totalUsdValueChange30d: string | null;
+  tokensTracked: number;
+  averageApr: string | null;
+  capturedAt: string;
+  positions: Array<{
+    tokenId: string;
+    tokenSymbol: string;
+    tokenName: string;
+    quantity: string;
+    usdValue: string;
+    priceUsd: string;
+    costBasisUsd: string | null;
+    unrealizedPnlUsd: string | null;
+    unrealizedPnlPercent: string | null;
+    positionType: string;
+  }>;
+}
+
+export interface PortfolioSnapshotsResponse {
+  data: PortfolioSnapshot[];
+  meta: {
+    walletId: string | null;
+    timeframe: string;
+    snapshotsCount: number;
+  };
+}
+
+export function fetchPerformanceMetrics(params?: {
+  walletId?: string;
+  timeframe?: '24h' | '7d' | '30d' | '90d' | '1y' | 'all';
+}) {
+  const searchParams = new URLSearchParams();
+  if (params?.walletId) searchParams.append('walletId', params.walletId);
+  if (params?.timeframe) searchParams.append('timeframe', params.timeframe);
+
+  const query = searchParams.toString() ? `?${searchParams.toString()}` : '';
+  return fetchApi<PerformanceMetricsResponse>(`/v1/performance/metrics${query}`);
+}
+
+export function fetchPortfolioHistory(params?: {
+  walletId?: string;
+  timeframe?: '24h' | '7d' | '30d' | '90d' | '1y' | 'all';
+}) {
+  const searchParams = new URLSearchParams();
+  if (params?.walletId) searchParams.append('walletId', params.walletId);
+  if (params?.timeframe) searchParams.append('timeframe', params.timeframe);
+
+  const query = searchParams.toString() ? `?${searchParams.toString()}` : '';
+  return fetchApi<PortfolioHistoryResponse>(`/v1/performance/history${query}`);
+}
+
+export function fetchTokenPriceChanges(params?: {
+  walletId?: string;
+  timeframe?: '24h' | '7d' | '30d';
+}) {
+  const searchParams = new URLSearchParams();
+  if (params?.walletId) searchParams.append('walletId', params.walletId);
+  if (params?.timeframe) searchParams.append('timeframe', params.timeframe);
+
+  const query = searchParams.toString() ? `?${searchParams.toString()}` : '';
+  return fetchApi<TokenPriceChangesResponse>(`/v1/performance/price-changes${query}`);
+}
+
+export function fetchPortfolioSnapshots(params?: {
+  walletId?: string;
+  timeframe?: '24h' | '7d' | '30d' | '90d' | '1y' | 'all';
+}) {
+  const searchParams = new URLSearchParams();
+  if (params?.walletId) searchParams.append('walletId', params.walletId);
+  if (params?.timeframe) searchParams.append('timeframe', params.timeframe);
+
+  const query = searchParams.toString() ? `?${searchParams.toString()}` : '';
+  return fetchApi<PortfolioSnapshotsResponse>(`/v1/performance/snapshots${query}`);
+}

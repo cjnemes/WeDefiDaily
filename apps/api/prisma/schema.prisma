@@ -40,6 +40,10 @@ model Wallet {
   gammaswapPositions  GammaswapPosition[]
   alerts              Alert[]
   priceThresholds     PriceThreshold[]
+  transactions        Transaction[]
+  portfolioSnapshots  PortfolioSnapshot[]
+  positionSnapshots   PositionSnapshot[]
+  performanceMetrics  PerformanceMetric[]
 
   @@unique([address, chainId], map: "wallet_address_chain_unique")
 }
@@ -63,6 +67,8 @@ model Protocol {
   gammaswapPositions  GammaswapPosition[]
   gammaswapPools      GammaswapPool[]
   alerts              Alert[]
+  transactions        Transaction[]
+  positionSnapshots   PositionSnapshot[]
 }
 
 model Token {
@@ -88,6 +94,8 @@ model Token {
   gammaswapPoolsAsQuote GammaswapPool[] @relation("GammaswapPoolQuoteToken")
   alerts              Alert[]
   priceThresholds     PriceThreshold[] @relation("PriceThresholdToken")
+  transactions        Transaction[]
+  positionSnapshots   PositionSnapshot[]
 
   @@unique([chainId, address], map: "token_chain_address_unique")
 }
@@ -412,4 +420,101 @@ model PriceThreshold {
   @@unique([walletId, tokenId, thresholdType, thresholdPrice], map: "price_threshold_unique")
   @@index([tokenId])
   @@index([isEnabled])
+}
+
+model Transaction {
+  id              String   @id @default(uuid())
+  walletId        String
+  tokenId         String
+  transactionHash String   @db.VarChar(72)
+  blockNumber     BigInt
+  transactionType String   @db.VarChar(32) // "buy", "sell", "claim", "transfer", "stake", "unstake"
+  amount          Decimal  @db.Decimal(36, 18)
+  priceUsd        Decimal? @db.Decimal(36, 18)
+  gasSpentUsd     Decimal? @db.Decimal(36, 18)
+  protocolId      String?
+  fromAddress     String?  @db.VarChar(42)
+  toAddress       String?  @db.VarChar(42)
+  metadata        Json?
+  occurredAt      DateTime
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  wallet          Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  token           Token    @relation(fields: [tokenId], references: [id], onDelete: Cascade)
+  protocol        Protocol? @relation(fields: [protocolId], references: [id], onDelete: SetNull)
+
+  @@unique([walletId, transactionHash, tokenId], map: "transaction_wallet_hash_token_unique")
+  @@index([walletId, occurredAt])
+  @@index([tokenId])
+  @@index([transactionType])
+  @@index([blockNumber])
+}
+
+model PortfolioSnapshot {
+  id                    String   @id @default(uuid())
+  walletId              String?  // null = all wallets combined snapshot
+  totalUsdValue         Decimal  @db.Decimal(36, 18)
+  totalUsdValueChange24h Decimal? @db.Decimal(36, 18)
+  totalUsdValueChange7d  Decimal? @db.Decimal(36, 18)
+  totalUsdValueChange30d Decimal? @db.Decimal(36, 18)
+  tokensTracked         Int
+  averageApr            Decimal? @db.Decimal(36, 18)
+  metadata              Json? // position breakdowns, asset allocations
+  capturedAt            DateTime @default(now())
+  createdAt             DateTime @default(now())
+
+  wallet                Wallet?  @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  positionSnapshots     PositionSnapshot[]
+
+  @@index([walletId, capturedAt])
+  @@index([capturedAt])
+}
+
+model PositionSnapshot {
+  id                  String   @id @default(uuid())
+  portfolioSnapshotId String
+  tokenId             String
+  walletId            String
+  quantity            Decimal  @db.Decimal(36, 18)
+  usdValue            Decimal  @db.Decimal(36, 18)
+  priceUsd            Decimal  @db.Decimal(36, 18)
+  costBasisUsd        Decimal? @db.Decimal(36, 18) // average cost per token
+  unrealizedPnlUsd    Decimal? @db.Decimal(36, 18)
+  unrealizedPnlPercent Decimal? @db.Decimal(36, 18)
+  positionType        String   @db.VarChar(32) // "liquid", "locked", "staked", "lp"
+  protocolId          String?
+  metadata            Json?
+
+  portfolioSnapshot   PortfolioSnapshot @relation(fields: [portfolioSnapshotId], references: [id], onDelete: Cascade)
+  token               Token             @relation(fields: [tokenId], references: [id], onDelete: Cascade)
+  wallet              Wallet            @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  protocol            Protocol?         @relation(fields: [protocolId], references: [id], onDelete: SetNull)
+
+  @@index([portfolioSnapshotId])
+  @@index([tokenId])
+  @@index([walletId])
+}
+
+model PerformanceMetric {
+  id                String   @id @default(uuid())
+  walletId          String?  // null = all wallets combined
+  timeframe         String   @db.VarChar(16) // "24h", "7d", "30d", "90d", "1y", "all"
+  totalReturn       Decimal? @db.Decimal(36, 18)
+  totalReturnPercent Decimal? @db.Decimal(36, 18)
+  realizedPnl       Decimal? @db.Decimal(36, 18)
+  unrealizedPnl     Decimal? @db.Decimal(36, 18)
+  sharpeRatio       Decimal? @db.Decimal(36, 18)
+  maxDrawdown       Decimal? @db.Decimal(36, 18)
+  volatility        Decimal? @db.Decimal(36, 18)
+  winRate           Decimal? @db.Decimal(36, 18)
+  tradesCount       Int      @default(0)
+  computedAt        DateTime @default(now())
+  metadata          Json?
+
+  wallet            Wallet?  @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@unique([walletId, timeframe], map: "performance_metric_wallet_timeframe_unique")
+  @@index([walletId, computedAt])
+  @@index([timeframe])
 }

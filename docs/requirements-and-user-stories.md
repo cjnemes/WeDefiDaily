@@ -11,7 +11,7 @@
 1. **Portfolio Snapshot**
    - ✅ Aggregate balances per chain and protocol with USD valuations.
    - ✅ Break down holdings by type: liquid assets, locked ve positions, staked LPs, pending rewards.
-   - ❌ Display performance deltas (24h/7d) using market data from CoinMarketCap/CoinGecko.
+   - ✅ Display performance deltas (24h/7d) using market data from CoinMarketCap/CoinGecko.
 
 2. **Reward & Claim Tracker**
    - ✅ Detect unclaimed rewards for Aerodrome gauges, Gammaswap emissions, and other supported farms.

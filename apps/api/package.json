@@ -23,6 +23,8 @@
     "sync:governance": "dotenv -e ../../.env -- tsx src/jobs/sync-governance.ts",
     "sync:rewards": "dotenv -e ../../.env -- tsx src/jobs/sync-rewards.ts",
     "sync:gammaswap": "dotenv -e ../../.env -- tsx src/jobs/sync-gammaswap.ts",
+    "sync:performance": "dotenv -e ../../.env -- tsx src/jobs/sync-performance.ts",
+    "calculate:performance": "dotenv -e ../../.env -- tsx src/jobs/calculate-performance.ts",
     "process:alerts": "dotenv -e ../../.env -- tsx src/jobs/process-alerts.ts",
     "generate:digest": "dotenv -e ../../.env -- tsx src/jobs/generate-digest.ts",
     "check:price-thresholds": "dotenv -e ../../.env -- tsx src/jobs/check-price-thresholds.ts"

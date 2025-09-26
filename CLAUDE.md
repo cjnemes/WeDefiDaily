@@ -40,6 +40,8 @@ npm run sync:balances           # Sync wallet balances via Alchemy + CoinGecko
 npm run sync:governance         # Sync Aerodrome/Thena vote escrow data
 npm run sync:rewards            # Sync claimable rewards across protocols
 npm run sync:gammaswap          # Sync Gammaswap positions and risk metrics
+npm run sync:performance        # Capture portfolio snapshots and historical prices
+npm run calculate:performance   # Calculate and store performance metrics
 npm run process:alerts          # Process alerts based on synced data
 npm run generate:digest         # Generate daily digest (Markdown + CSV)
 npm run check:price-thresholds  # Check price thresholds and generate alerts
@@ -55,10 +57,11 @@ npm run test:run --workspace @wedefidaily/api  # Run tests once
 
 ### Core Modules
 1. **Portfolio Engine** (`apps/api/src/services/`) - Aggregates wallet balances and positions across chains
-2. **Vote Analytics** - Aerodrome/veTHE governance integration for bribe optimization
-3. **Rewards Tracker** - Multi-protocol reward opportunity tracking with gas efficiency
-4. **Alert Dispatcher** - Converts triggers into notifications
-5. **Gammaswap Integration** - LP/borrow position risk analytics
+2. **Performance Analytics** (`apps/api/src/services/performance.ts`) - P&L tracking, performance metrics, and portfolio analytics
+3. **Vote Analytics** - Aerodrome/veTHE governance integration for bribe optimization
+4. **Rewards Tracker** - Multi-protocol reward opportunity tracking with gas efficiency
+5. **Alert Dispatcher** - Converts triggers into notifications
+6. **Gammaswap Integration** - LP/borrow position risk analytics
 
 ### Data Flow
 - Sync jobs ingest data via external APIs (Alchemy, CoinGecko, protocol APIs)
@@ -69,6 +72,7 @@ npm run test:run --workspace @wedefidaily/api  # Run tests once
 ### Key Services
 - **Alchemy Service** (`apps/api/src/services/alchemy.ts`) - On-chain balance fetching
 - **CoinGecko Service** (`apps/api/src/services/coingecko.ts`) - Price data enrichment
+- **Performance Service** (`apps/api/src/services/performance.ts`) - P&L calculations and metrics
 - **Governance Service** (`apps/api/src/services/governance.ts`) - ve-token analytics
 - **Rewards Service** (`apps/api/src/services/rewards.ts`) - Cross-protocol reward aggregation
 - **Gammaswap Service** (`apps/api/src/services/gammaswap.ts`) - Position risk assessment
@@ -84,6 +88,10 @@ npm run test:run --workspace @wedefidaily/api  # Run tests once
 - `GET /v1/gammaswap` - LP/borrow positions with health ratios
 - `GET /v1/alerts` - Generated alerts with filtering by status/type/severity
 - `GET /v1/price-thresholds` - Price monitoring thresholds for automated alerts
+- `GET /v1/performance/metrics` - Portfolio performance metrics (Sharpe ratio, max drawdown, volatility)
+- `GET /v1/performance/history` - Historical portfolio values for charting
+- `GET /v1/performance/price-changes` - Token price changes over time
+- `GET /v1/performance/snapshots` - Detailed portfolio snapshots with position breakdowns
 
 ## Project Management
 
