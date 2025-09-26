@@ -24,6 +24,7 @@ npm run db:studio            # Open Prisma Studio
 ```bash
 npm run dev:api              # Start API server (port 4000)
 npm run dev:web              # Start web server (port 3000)
+npm run dev:all              # Start both API and web servers concurrently
 npm run build                # Build both workspaces
 ```
 
@@ -62,12 +63,15 @@ npm run test:run --workspace @wedefidaily/api  # Run tests once
 4. **Rewards Tracker** - Multi-protocol reward opportunity tracking with gas efficiency
 5. **Alert Dispatcher** - Converts triggers into notifications
 6. **Gammaswap Integration** - LP/borrow position risk analytics
+7. **Intelligence Alerts** (`apps/api/src/services/intelligence-alerts.ts`) - Smart insights generation based on historical data
+8. **Digest Service** (`apps/api/src/services/digest.ts`) - Daily digest generation with multiple output formats
 
 ### Data Flow
 - Sync jobs ingest data via external APIs (Alchemy, CoinGecko, protocol APIs)
 - Prisma ORM persists normalized data to PostgreSQL
 - Fastify API exposes endpoints for frontend consumption
 - Alert processing evaluates conditions and logs notifications
+- Intelligence service analyzes snapshots for trends and generates contextual alerts
 
 ### Key Services
 - **Alchemy Service** (`apps/api/src/services/alchemy.ts`) - On-chain balance fetching
@@ -76,6 +80,8 @@ npm run test:run --workspace @wedefidaily/api  # Run tests once
 - **Governance Service** (`apps/api/src/services/governance.ts`) - ve-token analytics
 - **Rewards Service** (`apps/api/src/services/rewards.ts`) - Cross-protocol reward aggregation
 - **Gammaswap Service** (`apps/api/src/services/gammaswap.ts`) - Position risk assessment
+- **Alert Delivery** (`apps/api/src/services/alert-delivery.ts`) - Alert lifecycle management
+- **Intelligence Alerts** (`apps/api/src/services/intelligence-alerts.ts`) - Trend analysis and smart alerts
 
 ## API Endpoints
 
@@ -92,6 +98,11 @@ npm run test:run --workspace @wedefidaily/api  # Run tests once
 - `GET /v1/performance/history` - Historical portfolio values for charting
 - `GET /v1/performance/price-changes` - Token price changes over time
 - `GET /v1/performance/snapshots` - Detailed portfolio snapshots with position breakdowns
+- `GET /v1/risk-analytics/correlation-matrix` - Cross-position correlation analysis
+- `GET /v1/risk-analytics/protocol-exposure` - Protocol concentration risk metrics
+- `GET /v1/risk-analytics/volatility` - Historical volatility tracking and analysis
+- `GET /v1/risk-analytics/dashboard` - Comprehensive risk analytics overview
+- `GET /v1/digests` - List generated digests with content
 
 ## Project Management
 

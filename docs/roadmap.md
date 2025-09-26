@@ -39,21 +39,21 @@ See `docs/plans/phase-4-intelligence.md` for strategy. Completed tasks:
 - ✅ Reward decay monitor ([#34](https://github.com/cjnemes/WeDefiDaily/issues/34))
 - ✅ Gammaswap health trend insight ([#35](https://github.com/cjnemes/WeDefiDaily/issues/35))
 
-### Phase 5 – Critical Feature Gaps (Planning)
+### Phase 5 – Critical Feature Gaps (🚧 In Progress)
 Addressing missing PRD functionality:
-- **P&L & Performance Tracking** (2 weeks)
+- **P&L & Performance Tracking** (✅ Complete - Phase 5a)
   - Historical price snapshots and 24h/7d delta calculations
   - Transaction history tracking with cost basis
   - Portfolio performance metrics with chart visualizations
   - API endpoints for historical data queries
 
-- **Liquidity & Trading Analytics** (2 weeks)
+- **Liquidity & Trading Analytics** (📝 Planning - Phase 5b)
   - Pool depth and liquidity metrics from Aerodrome/Uniswap
   - Position size relative to pool TVL
   - Slippage estimates and optimal routing
   - Impermanent loss calculations for LP positions
 
-- **Advanced Risk Analytics** (1 week)
+- **Advanced Risk Analytics** (🚧 In Progress - Phase 5c)
   - Cross-position correlation analysis
   - Protocol exposure concentration warnings
   - Historical volatility tracking

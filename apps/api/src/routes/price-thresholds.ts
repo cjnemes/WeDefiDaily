@@ -85,7 +85,7 @@ function serializePriceThreshold(threshold: PriceThresholdWithRelations) {
 
 export function priceThresholdRoutes(fastify: FastifyInstance) {
   // GET /price-thresholds - List price thresholds
-  fastify.get('/', async (request) => {
+  fastify.get('/', async (request, reply) => {
     const { walletId, tokenId, isEnabled } = request.query as {
       walletId?: string;
       tokenId?: string;
@@ -97,107 +97,152 @@ export function priceThresholdRoutes(fastify: FastifyInstance) {
     if (tokenId) where.tokenId = tokenId;
     if (isEnabled !== undefined) where.isEnabled = isEnabled === 'true';
 
-    const thresholds = await fastify.prisma.priceThreshold.findMany({
-      where,
-      include: priceThresholdInclude,
-      orderBy: {
-        createdAt: 'desc'
-      }
-    });
+    try {
+      const thresholds = await fastify.prisma.priceThreshold.findMany({
+        where,
+        include: priceThresholdInclude,
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
 
-    return {
-      meta: {
-        count: thresholds.length,
-        generatedAt: new Date().toISOString()
-      },
-      data: {
-        thresholds: thresholds.map(serializePriceThreshold)
+      return {
+        meta: {
+          count: thresholds.length,
+          generatedAt: new Date().toISOString(),
+        },
+        data: {
+          thresholds: thresholds.map(serializePriceThreshold),
+        },
+      };
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2021') {
+        reply.status(500);
+        return {
+          error: 'SCHEMA_MISMATCH',
+          message: 'PriceThreshold table not found. Run `npm run prisma:db:push --workspace @wedefidaily/api` to create it.',
+        };
       }
-    };
+      fastify.log.error(error, 'failed to load price thresholds');
+      reply.status(500);
+      return {
+        error: 'UNEXPECTED_ERROR',
+        message: error instanceof Error ? error.message : 'Failed to load price alerts. Check API logs.',
+      };
+    }
   });
 
   // POST /price-thresholds - Create price threshold
   fastify.post('/', async (request, reply) => {
     const data = CreateThresholdSchema.parse(request.body);
 
-    // Check if threshold already exists
-    const existing = await fastify.prisma.priceThreshold.findFirst({
-      where: {
-        walletId: data.walletId || null,
-        tokenId: data.tokenId,
-        thresholdType: data.thresholdType,
-        thresholdPrice: data.thresholdPrice
-      }
-    });
-
-    if (existing) {
-      reply.status(409);
-      return {
-        error: 'THRESHOLD_EXISTS',
-        message: 'A threshold with these parameters already exists'
-      };
-    }
-
-    // Verify wallet exists if provided
-    if (data.walletId) {
-      const wallet = await fastify.prisma.wallet.findUnique({
-        where: { id: data.walletId }
+    try {
+      // Check if threshold already exists
+      const existing = await fastify.prisma.priceThreshold.findFirst({
+        where: {
+          walletId: data.walletId || null,
+          tokenId: data.tokenId,
+          thresholdType: data.thresholdType,
+          thresholdPrice: data.thresholdPrice,
+        },
       });
-      if (!wallet) {
-        reply.status(404);
+
+      if (existing) {
+        reply.status(409);
         return {
-          error: 'WALLET_NOT_FOUND',
-          message: 'Wallet not found'
+          error: 'THRESHOLD_EXISTS',
+          message: 'A threshold with these parameters already exists',
         };
       }
-    }
 
-    // Verify token exists
-    const token = await fastify.prisma.token.findUnique({
-      where: { id: data.tokenId }
-    });
-    if (!token) {
-      reply.status(404);
+      if (data.walletId) {
+        const wallet = await fastify.prisma.wallet.findUnique({
+          where: { id: data.walletId },
+        });
+        if (!wallet) {
+          reply.status(404);
+          return {
+            error: 'WALLET_NOT_FOUND',
+            message: 'Wallet not found',
+          };
+        }
+      }
+
+      const token = await fastify.prisma.token.findUnique({
+        where: { id: data.tokenId },
+      });
+      if (!token) {
+        reply.status(404);
+        return {
+          error: 'TOKEN_NOT_FOUND',
+          message: 'Token not found',
+        };
+      }
+
+      const threshold = await fastify.prisma.priceThreshold.create({
+        data: {
+          walletId: data.walletId || null,
+          tokenId: data.tokenId,
+          thresholdType: data.thresholdType,
+          thresholdPrice: data.thresholdPrice,
+          isEnabled: data.isEnabled,
+          metadata: data.metadata,
+        },
+        include: priceThresholdInclude,
+      });
+
+      reply.status(201);
+      return serializePriceThreshold(threshold);
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2021') {
+        reply.status(500);
+        return {
+          error: 'SCHEMA_MISMATCH',
+          message: 'Required price-threshold tables are missing. Run `npm run prisma:db:push --workspace @wedefidaily/api`.',
+        };
+      }
+      fastify.log.error(error, 'failed to create price threshold');
+      reply.status(500);
       return {
-        error: 'TOKEN_NOT_FOUND',
-        message: 'Token not found'
+        error: 'UNEXPECTED_ERROR',
+        message: error instanceof Error ? error.message : 'Failed to create price alert.',
       };
     }
-
-    const threshold = await fastify.prisma.priceThreshold.create({
-      data: {
-        walletId: data.walletId || null,
-        tokenId: data.tokenId,
-        thresholdType: data.thresholdType,
-        thresholdPrice: data.thresholdPrice,
-        isEnabled: data.isEnabled,
-        metadata: data.metadata
-      },
-      include: priceThresholdInclude,
-    });
-
-    reply.status(201);
-    return serializePriceThreshold(threshold);
   });
 
   // GET /price-thresholds/:id - Get specific threshold
   fastify.get('/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
+    try {
+      const threshold = await fastify.prisma.priceThreshold.findUnique({
+        where: { id },
+        include: priceThresholdInclude,
+      });
 
-    const threshold = await fastify.prisma.priceThreshold.findUnique({
-      where: { id },
-      include: priceThresholdInclude,
-    });
+      if (!threshold) {
+        reply.status(404);
+        return {
+          error: 'THRESHOLD_NOT_FOUND',
+          message: 'Price threshold not found',
+        };
+      }
 
-    if (!threshold) {
-      reply.status(404);
+      return serializePriceThreshold(threshold);
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2021') {
+        reply.status(500);
+        return {
+          error: 'SCHEMA_MISMATCH',
+          message: 'PriceThreshold table not found. Run `npm run prisma:db:push --workspace @wedefidaily/api`.',
+        };
+      }
+      fastify.log.error(error, 'failed to load price threshold');
+      reply.status(500);
       return {
-        error: 'THRESHOLD_NOT_FOUND',
-        message: 'Price threshold not found'
+        error: 'UNEXPECTED_ERROR',
+        message: error instanceof Error ? error.message : 'Failed to load price alert.',
       };
     }
-
-    return serializePriceThreshold(threshold);
   });
 
   // PUT /price-thresholds/:id - Update threshold
@@ -205,52 +250,84 @@ export function priceThresholdRoutes(fastify: FastifyInstance) {
     const { id } = request.params as { id: string };
     const data = UpdateThresholdSchema.parse(request.body);
 
-    const existing = await fastify.prisma.priceThreshold.findUnique({
-      where: { id }
-    });
+    try {
+      const existing = await fastify.prisma.priceThreshold.findUnique({
+        where: { id },
+      });
 
-    if (!existing) {
-      reply.status(404);
+      if (!existing) {
+        reply.status(404);
+        return {
+          error: 'THRESHOLD_NOT_FOUND',
+          message: 'Price threshold not found',
+        };
+      }
+
+      const threshold = await fastify.prisma.priceThreshold.update({
+        where: { id },
+        data: {
+          ...(data.thresholdPrice && { thresholdPrice: data.thresholdPrice }),
+          ...(data.isEnabled !== undefined && { isEnabled: data.isEnabled }),
+          ...(data.metadata !== undefined && { metadata: data.metadata }),
+        },
+        include: priceThresholdInclude,
+      });
+
+      return serializePriceThreshold(threshold);
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2021') {
+        reply.status(500);
+        return {
+          error: 'SCHEMA_MISMATCH',
+          message: 'PriceThreshold table not found. Run `npm run prisma:db:push --workspace @wedefidaily/api`.',
+        };
+      }
+      fastify.log.error(error, 'failed to update price threshold');
+      reply.status(500);
       return {
-        error: 'THRESHOLD_NOT_FOUND',
-        message: 'Price threshold not found'
+        error: 'UNEXPECTED_ERROR',
+        message: error instanceof Error ? error.message : 'Failed to update price alert.',
       };
     }
-
-    const threshold = await fastify.prisma.priceThreshold.update({
-      where: { id },
-      data: {
-        ...(data.thresholdPrice && { thresholdPrice: data.thresholdPrice }),
-        ...(data.isEnabled !== undefined && { isEnabled: data.isEnabled }),
-        ...(data.metadata !== undefined && { metadata: data.metadata })
-      },
-      include: priceThresholdInclude,
-    });
-
-    return serializePriceThreshold(threshold);
   });
 
   // DELETE /price-thresholds/:id - Delete threshold
   fastify.delete('/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
 
-    const existing = await fastify.prisma.priceThreshold.findUnique({
-      where: { id }
-    });
+    try {
+      const existing = await fastify.prisma.priceThreshold.findUnique({
+        where: { id },
+      });
 
-    if (!existing) {
-      reply.status(404);
+      if (!existing) {
+        reply.status(404);
+        return {
+          error: 'THRESHOLD_NOT_FOUND',
+          message: 'Price threshold not found',
+        };
+      }
+
+      await fastify.prisma.priceThreshold.delete({
+        where: { id },
+      });
+
+      reply.status(204);
+      return null;
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2021') {
+        reply.status(500);
+        return {
+          error: 'SCHEMA_MISMATCH',
+          message: 'PriceThreshold table not found. Run `npm run prisma:db:push --workspace @wedefidaily/api`.',
+        };
+      }
+      fastify.log.error(error, 'failed to delete price threshold');
+      reply.status(500);
       return {
-        error: 'THRESHOLD_NOT_FOUND',
-        message: 'Price threshold not found'
+        error: 'UNEXPECTED_ERROR',
+        message: error instanceof Error ? error.message : 'Failed to delete price alert.',
       };
     }
-
-    await fastify.prisma.priceThreshold.delete({
-      where: { id }
-    });
-
-    reply.status(204);
-    return null;
   });
 }

@@ -1,12 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { Watchlist } from '@/components/watchlist';
 import {
   fetchPortfolio,
   fetchGovernance,
   fetchPerformanceMetrics,
+  triggerDigest,
 } from '@/lib/api';
 
 // Import formatting functions and types
@@ -65,6 +66,10 @@ export function DashboardClient() {
   const { data: performance } = useQuery({
     queryKey: ['performance', '24h'],
     queryFn: () => fetchPerformanceMetrics({ timeframe: '24h' }),
+  });
+
+  const digestMutation = useMutation({
+    mutationFn: () => triggerDigest(),
   });
 
   const totalUsd = portfolio ? formatCurrency(portfolio.meta.totalUsd, "—") : "—";
@@ -172,12 +177,36 @@ export function DashboardClient() {
           >
             Risk Analytics →
           </Link>
+          <Link
+            href="/digests"
+            className="rounded-lg bg-foreground/10 px-4 py-2 text-sm hover:bg-foreground/20 transition-colors"
+          >
+            Digest History →
+          </Link>
           <button
+            onClick={() => digestMutation.mutate()}
+            disabled={digestMutation.isPending}
             className="rounded-lg bg-blue-500 px-4 py-2 text-sm text-white hover:bg-blue-600 transition-colors"
           >
-            Generate Digest
+            {digestMutation.isPending ? 'Generating…' : 'Generate Digest'}
           </button>
         </nav>
+
+        {digestMutation.isSuccess && digestMutation.data && (
+          <p className="text-sm text-foreground/60">
+            Digest recorded at {new Date(digestMutation.data.meta.generatedAt).toLocaleString()} · Run ID{' '}
+            {digestMutation.data.data.run.id.slice(0, 8)}… · snapshots (wallets{' '}
+            {digestMutation.data.data.snapshots.walletBalances}, locks{' '}
+            {digestMutation.data.data.snapshots.governanceLocks}, rewards{' '}
+            {digestMutation.data.data.snapshots.rewards}, gammaswap{' '}
+            {digestMutation.data.data.snapshots.gammaswapPositions})
+          </p>
+        )}
+        {digestMutation.isError && (
+          <p className="text-sm text-red-500">
+            {(digestMutation.error as Error).message || 'Failed to generate digest. Please try again.'}
+          </p>
+        )}
       </header>
 
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-12 px-6 pb-20">

@@ -26,6 +26,6 @@ Map each roadmap bullet to a GitHub issue so progress and reviews stay traceable
 
 | Phase 5a | P&L and performance tracking | [#41](https://github.com/cjnemes/WeDefiDaily/issues/41) | ✅ Done |
 | Phase 5b | Liquidity analytics integration | [#42](https://github.com/cjnemes/WeDefiDaily/issues/42) | 📝 Planning |
-| Phase 5c | Advanced risk analytics | [#43](https://github.com/cjnemes/WeDefiDaily/issues/43) | 📝 Planning |
+| Phase 5c | Advanced risk analytics | [#44](https://github.com/cjnemes/WeDefiDaily/issues/44) | 🚧 In progress |
 
 Update this table whenever you open/close issues so the roadmap and GitHub board stay in sync.

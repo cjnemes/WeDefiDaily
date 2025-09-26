@@ -13,6 +13,7 @@ import { priceThresholdRoutes } from './routes/price-thresholds';
 import { tokenRoutes } from './routes/tokens';
 import { performanceRoutes } from './routes/performance';
 import { riskAnalyticsRoutes } from './routes/risk-analytics';
+import { digestRoutes } from './routes/digest';
 
 export interface BuildAppOptions {
   enableRequestLogging?: boolean;
@@ -49,6 +50,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   await app.register(tokenRoutes, { prefix: '/v1/tokens' });
   await app.register(performanceRoutes, { prefix: '/v1/performance' });
   await app.register(riskAnalyticsRoutes, { prefix: '/v1/risk-analytics' });
+  await app.register(digestRoutes, { prefix: '/v1/digest' });
 
   return app;
 }
