@@ -75,22 +75,99 @@ async function jsonRpcFetch<T>(rpcUrl: string, body: JsonRpcRequest): Promise<T>
 }
 
 export async function getWalletTokenBalances(rpcUrl: string, address: string): Promise<TokenBalanceResult[]> {
-  const result = await jsonRpcFetch<{ tokenBalances: Array<{ contractAddress: string; tokenBalance: string }> }>(
-    rpcUrl,
-    {
-      jsonrpc: '2.0',
-      id: 1,
-      method: 'alchemy_getTokenBalances',
-      params: [address, 'erc20'],
-    }
-  );
+  // First try enhanced token balances which detects more tokens
+  try {
+    const enhancedResult = await jsonRpcFetch<{
+      address: string;
+      tokenBalances: Array<{
+        contractAddress: string;
+        tokenBalance: string;
+        error?: string;
+      }>
+    }>(
+      rpcUrl,
+      {
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'alchemy_getTokenBalances',
+        params: [address, 'DEFAULT_TOKENS'],
+      }
+    );
 
-  return result.tokenBalances
-    .map((token) => ({
-      contractAddress: token.contractAddress.toLowerCase(),
-      rawBalance: BigInt(token.tokenBalance ?? '0x0'),
-    }))
-    .filter((token) => token.rawBalance > BigInt(0));
+    let allTokens = enhancedResult.tokenBalances
+      .filter(token => !token.error && token.tokenBalance !== '0x0')
+      .map((token) => ({
+        contractAddress: token.contractAddress.toLowerCase(),
+        rawBalance: BigInt(token.tokenBalance ?? '0x0'),
+      }))
+      .filter((token) => token.rawBalance > BigInt(0));
+
+    // Also check specific high-value DeFi tokens that might be missed
+    const knownTokens = [
+      '0x940181a94a35a4569e4529a3cdfb74e38fd98631', // AERO
+      '0xbaa5cc21fd487b8fcc2f632f3f4e8d37262a0842', // MORPHO
+      '0x9d0E8f5b25384C7310CB8C6aE32C8fbeb645d083', // DRV (correct address)
+      '0x4200000000000000000000000000000000000006', // WETH
+      '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913', // USDC
+      '0xd9aaec86b65d86f6a7b5b1b0c42ffa531710b6ca', // USDbC
+    ];
+
+    const specificResult = await jsonRpcFetch<{
+      tokenBalances: Array<{
+        contractAddress: string;
+        tokenBalance: string;
+        error?: string;
+      }>
+    }>(
+      rpcUrl,
+      {
+        jsonrpc: '2.0',
+        id: 2,
+        method: 'alchemy_getTokenBalances',
+        params: [address, knownTokens],
+      }
+    );
+
+    const specificTokens = specificResult.tokenBalances
+      .filter(token => !token.error && token.tokenBalance !== '0x0')
+      .map((token) => ({
+        contractAddress: token.contractAddress.toLowerCase(),
+        rawBalance: BigInt(token.tokenBalance ?? '0x0'),
+      }))
+      .filter((token) => token.rawBalance > BigInt(0));
+
+    // Merge results, avoiding duplicates
+    const existingAddresses = new Set(allTokens.map(t => t.contractAddress));
+    for (const token of specificTokens) {
+      if (!existingAddresses.has(token.contractAddress)) {
+        allTokens.push(token);
+      }
+    }
+
+    console.log(`Enhanced token detection: Found ${allTokens.length} tokens with balances`);
+    return allTokens;
+
+  } catch (error) {
+    console.warn('Enhanced token balances failed, falling back to basic:', error);
+
+    // Fallback to basic method
+    const result = await jsonRpcFetch<{ tokenBalances: Array<{ contractAddress: string; tokenBalance: string }> }>(
+      rpcUrl,
+      {
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'alchemy_getTokenBalances',
+        params: [address, 'erc20'],
+      }
+    );
+
+    return result.tokenBalances
+      .map((token) => ({
+        contractAddress: token.contractAddress.toLowerCase(),
+        rawBalance: BigInt(token.tokenBalance ?? '0x0'),
+      }))
+      .filter((token) => token.rawBalance > BigInt(0));
+  }
 }
 
 export async function getWalletNativeBalance(rpcUrl: string, address: string): Promise<bigint> {

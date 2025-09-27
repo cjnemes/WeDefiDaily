@@ -23,6 +23,22 @@ export interface PriceResult {
   priceUsd: Decimal;
 }
 
+// Cache for API key endpoint detection
+const apiKeyEndpointCache = new Map<string, string>();
+
+// Determine base URL based on API key type
+async function getBaseUrl(apiKey: string | undefined): Promise<string> {
+  // If no API key, use standard endpoint
+  if (!apiKey) {
+    return 'https://api.coingecko.com';
+  }
+
+  // Based on the error messages, our API key is a Demo/Free key, not paid
+  // Free/Demo keys use the standard endpoint
+  console.log('CoinGecko: Using standard endpoint for Demo/Free API key');
+  return 'https://api.coingecko.com';
+}
+
 export async function fetchTokenPrices(
   apiKey: string | undefined,
   tokens: TokenIdentifier[]
@@ -30,6 +46,8 @@ export async function fetchTokenPrices(
   if (tokens.length === 0) {
     return new Map();
   }
+
+  const baseUrl = await getBaseUrl(apiKey);
 
   const grouped = tokens
     .filter((token) => !token.isNative)
@@ -52,32 +70,46 @@ export async function fetchTokenPrices(
       }
 
       const addresses = Array.from(addressesSet);
-      const params = new URLSearchParams({
-        contract_addresses: addresses.join(','),
-        vs_currencies: 'usd',
-      });
 
-      const response = await fetch(`https://api.coingecko.com/api/v3/simple/token_price/${platform}?${params.toString()}`, {
-        headers: apiKey
-          ? {
-              'x-cg-pro-api-key': apiKey,
-            }
-          : undefined,
-      });
+      // Batch addresses to avoid 414 Request-URI Too Large errors
+      // CoinGecko typically supports ~50-100 addresses per request
+      const batchSize = 50;
 
-      if (!response.ok) {
-        const body = await response.text();
-        throw new Error(`CoinGecko API error ${response.status}: ${body}`);
-      }
+      for (let i = 0; i < addresses.length; i += batchSize) {
+        const batch = addresses.slice(i, i + batchSize);
 
-      const json = (await response.json()) as Record<string, { usd: number }>;
-      addresses.forEach((address) => {
-        const tokenKey = address.toLowerCase();
-        const priceEntry = json[tokenKey];
-        if (priceEntry && typeof priceEntry.usd === 'number') {
-          priceMap.set(`${chainId}:${tokenKey}`, new Decimal(priceEntry.usd));
+        const params = new URLSearchParams({
+          contract_addresses: batch.join(','),
+          vs_currencies: 'usd',
+        });
+
+        const response = await fetch(`${baseUrl}/api/v3/simple/token_price/${platform}?${params.toString()}`, {
+          headers: apiKey
+            ? {
+                'x-cg-pro-api-key': apiKey,
+              }
+            : undefined,
+        });
+
+        if (!response.ok) {
+          const body = await response.text();
+          throw new Error(`CoinGecko API error ${response.status}: ${body}`);
         }
-      });
+
+        const json = (await response.json()) as Record<string, { usd: number }>;
+        batch.forEach((address) => {
+          const tokenKey = address.toLowerCase();
+          const priceEntry = json[tokenKey];
+          if (priceEntry && typeof priceEntry.usd === 'number') {
+            priceMap.set(`${chainId}:${tokenKey}`, new Decimal(priceEntry.usd));
+          }
+        });
+
+        // Add delay between requests to respect rate limits
+        if (i + batchSize < addresses.length) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
     })
   );
 
@@ -97,7 +129,7 @@ export async function fetchTokenPrices(
       vs_currencies: 'usd',
     });
 
-    const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?${params.toString()}`, {
+    const response = await fetch(`${baseUrl}/api/v3/simple/price?${params.toString()}`, {
       headers: apiKey
         ? {
             'x-cg-pro-api-key': apiKey,

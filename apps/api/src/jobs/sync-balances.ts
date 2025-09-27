@@ -2,7 +2,7 @@ import { Prisma, PrismaClient } from '@prisma/client';
 import Decimal from 'decimal.js';
 import { env } from '../config';
 import { getNormalizedBalances } from '../services/alchemy';
-import { fetchTokenPrices } from '../services/coingecko';
+import { defaultPricingService } from '../services/pricing';
 
 const prisma = new PrismaClient();
 
@@ -121,7 +121,7 @@ async function syncWallet(walletId: string) {
 
   const { erc20, native } = await getNormalizedBalances(rpcUrl, wallet.address);
 
-  const tokenIdentifiers: Array<{ chainId: number; address: string; tokenId: string; isNative?: boolean }> = [];
+  const tokenIdentifiers: Array<{ chainId: number; address: string; tokenId: string; symbol?: string; isNative?: boolean }> = [];
 
   if (native) {
     const token = await ensureToken({
@@ -133,7 +133,7 @@ async function syncWallet(walletId: string) {
       isNative: true,
     });
 
-    tokenIdentifiers.push({ chainId: wallet.chainId, address: token.address, tokenId: token.id, isNative: true });
+    tokenIdentifiers.push({ chainId: wallet.chainId, address: token.address, tokenId: token.id, symbol: native.symbol, isNative: true });
 
     await upsertTokenBalance({
       walletId: wallet.id,
@@ -153,7 +153,7 @@ async function syncWallet(walletId: string) {
       isNative: false,
     });
 
-    tokenIdentifiers.push({ chainId: wallet.chainId, address: token.address, tokenId: token.id });
+    tokenIdentifiers.push({ chainId: wallet.chainId, address: token.address, tokenId: token.id, symbol: balance.symbol });
 
     await upsertTokenBalance({
       walletId: wallet.id,
@@ -164,7 +164,7 @@ async function syncWallet(walletId: string) {
   }
 
   try {
-    const priceMap = await fetchTokenPrices(env.COINGECKO_API_KEY, tokenIdentifiers);
+    const priceMap = await defaultPricingService.fetchTokenPrices(tokenIdentifiers);
     for (const { tokenId, chainId, address } of tokenIdentifiers) {
       const priceKey = `${chainId}:${address}`;
       const price = priceMap.get(priceKey);
