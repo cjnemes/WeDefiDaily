@@ -192,6 +192,8 @@ export async function fetchVeTHELockOnChain(
   bscRpcUrl: string,
   address: string
 ): Promise<NormalizedLock | null> {
+  console.log(`📡 Starting veTHE on-chain fetch for ${address} using RPC: ${bscRpcUrl.replace(/\/[^\/]+$/, '/***')}`);
+
   const bscService = createBSCContractService(bscRpcUrl);
   if (!bscService) {
     console.warn('BSC contract service not available, skipping veTHE on-chain fetch');
@@ -199,10 +201,11 @@ export async function fetchVeTHELockOnChain(
   }
 
   try {
+    console.log(`🔍 Calling getAggregatedVeTHEData for ${address}...`);
     const result = await bscService.getAggregatedVeTHEData(address);
 
     if (!result.success || !result.data) {
-      console.warn(`Failed to fetch veTHE data for ${address}:`, result.error);
+      console.warn(`❌ Failed to fetch veTHE data for ${address}:`, result.error);
       return null;
     }
 
@@ -246,9 +249,15 @@ export async function fetchThenaLockEnhanced(
     }
   }
 
-  // Fallback to API method
-  console.log(`Falling back to API method for veTHE data: ${address}`);
-  return fetchThenaLock(apiUrl, address);
+  // Only fallback to API if URL is configured and valid
+  if (apiUrl && apiUrl.trim() && !apiUrl.includes('api.llama.fi')) {
+    console.log(`Falling back to API method for veTHE data: ${address}`);
+    return fetchThenaLock(apiUrl, address);
+  }
+
+  // No fallback available - return null
+  console.log(`No veTHE data available for ${address} (on-chain failed, no valid API configured)`);
+  return null;
 }
 
 export async function fetchAerodromeBribes(apiUrl: string): Promise<NormalizedBribe[]> {
