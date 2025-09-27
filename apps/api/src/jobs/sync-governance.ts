@@ -6,7 +6,7 @@ import {
   fetchAerodromeBribes,
   fetchAerodromeLock,
   fetchThenaBribes,
-  fetchThenaLock,
+  fetchThenaLockEnhanced,
   NormalizedBribe,
   NormalizedLock,
 } from '../services/governance';
@@ -18,7 +18,9 @@ interface GovernanceProtocolConfig {
   name: string;
   chainId: number;
   apiUrl?: string | null;
+  bscRpcUrl?: string | null;
   lockFetcher?: (apiUrl: string, address: string) => Promise<NormalizedLock | null>;
+  enhancedLockFetcher?: (apiUrl: string, bscRpcUrl: string | undefined, address: string) => Promise<NormalizedLock | null>;
   bribeFetcher?: (apiUrl: string) => Promise<NormalizedBribe[]>;
 }
 
@@ -35,9 +37,10 @@ const GOVERNANCE_PROTOCOLS: GovernanceProtocolConfig[] = [
     slug: 'thena',
     name: 'Thena',
     chainId: 56,
-    apiUrl: env.THENA_API_URL,
-    lockFetcher: env.THENA_API_URL ? fetchThenaLock : undefined,
-    bribeFetcher: env.THENA_API_URL ? fetchThenaBribes : undefined,
+    apiUrl: null, // Thena doesn't have REST API
+    bscRpcUrl: env.ALCHEMY_BSC_RPC_URL || env.BSC_RPC_URL,
+    enhancedLockFetcher: fetchThenaLockEnhanced, // Uses on-chain BSC integration
+    bribeFetcher: undefined, // Will implement subgraph integration later
   },
 ];
 
@@ -229,16 +232,15 @@ async function upsertBribe(
 }
 
 async function syncProtocol(config: GovernanceProtocolConfig) {
-  const apiUrl = config.apiUrl;
-  if (!apiUrl) {
-    console.warn(`Skipping ${config.slug} governance sync: API URL not configured`);
-    return;
-  }
-
   const protocol = await ensureProtocol(config);
 
-  if (config.lockFetcher) {
-    const lockFetcher = config.lockFetcher;
+  // Handle different types of lock fetchers
+  const hasLockFetching = config.lockFetcher || config.enhancedLockFetcher;
+
+  if (!hasLockFetching) {
+    console.warn(`Skipping ${config.slug} governance lock sync: No lock fetcher configured`);
+  } else {
+    // Get relevant wallets for this chain
     const wallets = await prisma.wallet.findMany({
       where: { chainId: config.chainId },
       select: { id: true, address: true },
@@ -247,7 +249,21 @@ async function syncProtocol(config: GovernanceProtocolConfig) {
     await Promise.all(
       wallets.map(async (wallet) => {
         try {
-          const lock = await lockFetcher(apiUrl, wallet.address);
+          let lock: NormalizedLock | null = null;
+
+          // Use enhanced fetcher if available (for Thena with on-chain integration)
+          if (config.enhancedLockFetcher && config.bscRpcUrl) {
+            lock = await config.enhancedLockFetcher(
+              config.apiUrl || '',
+              config.bscRpcUrl,
+              wallet.address
+            );
+          }
+          // Fallback to regular fetcher (for Aerodrome API-based)
+          else if (config.lockFetcher && config.apiUrl) {
+            lock = await config.lockFetcher(config.apiUrl, wallet.address);
+          }
+
           if (!lock) {
             // User has unlocked or migrated - clear the existing lock
             await prisma.governanceLock.updateMany({
@@ -268,17 +284,18 @@ async function syncProtocol(config: GovernanceProtocolConfig) {
           }
 
           await upsertGovernanceLock(lock, protocol.id, wallet.id);
+          console.log(`✓ Synced ${config.slug} lock for ${wallet.address}: ${lock.lockAmount.toString()} locked, ${lock.votingPower.toString()} voting power`);
         } catch (error: unknown) {
-          console.error(`Failed to sync governance lock for ${wallet.address}`, error);
+          console.error(`Failed to sync governance lock for ${wallet.address} on ${config.slug}:`, error);
         }
       })
     );
   }
 
-  if (config.bribeFetcher) {
+  if (config.bribeFetcher && config.apiUrl) {
     let bribes: NormalizedBribe[] = [];
     try {
-      bribes = await config.bribeFetcher(apiUrl);
+      bribes = await config.bribeFetcher(config.apiUrl);
     } catch (error: unknown) {
       console.error(`Failed to fetch bribes for ${config.slug}`, error);
       return;

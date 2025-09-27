@@ -1,5 +1,6 @@
 import Decimal from 'decimal.js';
 import { z } from 'zod';
+import { BSCContractService, createBSCContractService } from './bsc-contract.js';
 
 export interface NormalizedLock {
   address: string;
@@ -181,6 +182,73 @@ export async function fetchThenaLock(
     lockEndsAt: data.unlockTimestamp ? new Date(data.unlockTimestamp * 1000) : undefined,
     protocolSlug: 'thena',
   } satisfies NormalizedLock;
+}
+
+/**
+ * Fetch veTHE lock data directly from BSC smart contracts
+ * This is the primary method for getting accurate on-chain veTHE data
+ */
+export async function fetchVeTHELockOnChain(
+  bscRpcUrl: string,
+  address: string
+): Promise<NormalizedLock | null> {
+  const bscService = createBSCContractService(bscRpcUrl);
+  if (!bscService) {
+    console.warn('BSC contract service not available, skipping veTHE on-chain fetch');
+    return null;
+  }
+
+  try {
+    const result = await bscService.getAggregatedVeTHEData(address);
+
+    if (!result.success || !result.data) {
+      console.warn(`Failed to fetch veTHE data for ${address}:`, result.error);
+      return null;
+    }
+
+    const { totalLockAmount, totalVotingPower, nextExpiration, boostMultiplier } = result.data;
+
+    // Only return data if there are active locks
+    if (totalLockAmount.eq(0) && totalVotingPower.eq(0)) {
+      return null;
+    }
+
+    return {
+      address,
+      lockAmount: totalLockAmount,
+      votingPower: totalVotingPower,
+      boostMultiplier,
+      lockEndsAt: nextExpiration,
+      protocolSlug: 'thena',
+    } satisfies NormalizedLock;
+
+  } catch (error) {
+    console.error(`Error fetching veTHE data for ${address}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Enhanced Thena lock fetcher that prioritizes on-chain data over API
+ * Falls back to API method if on-chain fails
+ */
+export async function fetchThenaLockEnhanced(
+  apiUrl: string,
+  bscRpcUrl: string | undefined,
+  address: string
+): Promise<NormalizedLock | null> {
+  // First try on-chain data (most accurate)
+  if (bscRpcUrl) {
+    const onChainResult = await fetchVeTHELockOnChain(bscRpcUrl, address);
+    if (onChainResult) {
+      console.log(`✓ Fetched veTHE data on-chain for ${address}: ${onChainResult.lockAmount.toString()} THE locked`);
+      return onChainResult;
+    }
+  }
+
+  // Fallback to API method
+  console.log(`Falling back to API method for veTHE data: ${address}`);
+  return fetchThenaLock(apiUrl, address);
 }
 
 export async function fetchAerodromeBribes(apiUrl: string): Promise<NormalizedBribe[]> {
