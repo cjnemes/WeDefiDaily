@@ -25,7 +25,7 @@
 
 4. **Trading Outlook**
    - ✅ Maintain a watchlist of target tokens, pulling price, volume, and volatility metrics.
-   - ❌ Surface liquidity insights (e.g., top pools on Aerodrome) and show your positions relative to pool totals.
+   - ✅ Surface liquidity insights (e.g., top pools on Aerodrome) and show your positions relative to pool totals.
    - ✅ Integrate basic risk alerts (large price swings, pool imbalance, funding changes where available).
 
 5. **Alerting Layer**

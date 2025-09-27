@@ -27,6 +27,7 @@ Map each roadmap bullet to a GitHub issue so progress and reviews stay traceable
 | Phase 5a | P&L and performance tracking | [#41](https://github.com/cjnemes/WeDefiDaily/issues/41) | ✅ Done |
 | Phase 5b | Liquidity analytics integration | [#42](https://github.com/cjnemes/WeDefiDaily/issues/42) | ✅ Done |
 | Phase 5c | Advanced risk analytics | [#44](https://github.com/cjnemes/WeDefiDaily/issues/44) | ✅ Done (ready for PR) |
-| Phase 5 Critical | Base token pricing integration (AERO/MORPHO/DRV) | [#49](https://github.com/cjnemes/WeDefiDaily/issues/49) | 🚧 In progress |
+| Phase 5 Critical | Base token pricing integration (AERO/MORPHO/DRV) | [#49](https://github.com/cjnemes/WeDefiDaily/issues/49) | ✅ Done (PR #50) |
+| Phase 5 Critical | veTHE On-Chain Integration | [#51](https://github.com/cjnemes/WeDefiDaily/issues/51) | 🚧 In progress |
 
 Update this table whenever you open/close issues so the roadmap and GitHub board stay in sync.

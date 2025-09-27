@@ -43,6 +43,7 @@ npm run sync:rewards            # Sync claimable rewards across protocols
 npm run sync:gammaswap          # Sync Gammaswap positions and risk metrics
 npm run sync:performance        # Capture portfolio snapshots and historical prices
 npm run calculate:performance   # Calculate and store performance metrics
+npm run calculate:risk-analytics # Calculate correlation matrix, exposure, and volatility metrics
 npm run process:alerts          # Process alerts based on synced data
 npm run generate:digest         # Generate daily digest (Markdown + CSV)
 npm run check:price-thresholds  # Check price thresholds and generate alerts
@@ -59,12 +60,13 @@ npm run test:run --workspace @wedefidaily/api  # Run tests once
 ### Core Modules
 1. **Portfolio Engine** (`apps/api/src/services/`) - Aggregates wallet balances and positions across chains
 2. **Performance Analytics** (`apps/api/src/services/performance.ts`) - P&L tracking, performance metrics, and portfolio analytics
-3. **Vote Analytics** - Aerodrome/veTHE governance integration for bribe optimization
-4. **Rewards Tracker** - Multi-protocol reward opportunity tracking with gas efficiency
-5. **Alert Dispatcher** - Converts triggers into notifications
-6. **Gammaswap Integration** - LP/borrow position risk analytics
-7. **Intelligence Alerts** (`apps/api/src/services/intelligence-alerts.ts`) - Smart insights generation based on historical data
-8. **Digest Service** (`apps/api/src/services/digest.ts`) - Daily digest generation with multiple output formats
+3. **Risk Analytics** (`apps/api/src/services/risk-analytics.ts`) - Correlation analysis, protocol exposure monitoring, volatility tracking, and VaR calculations
+4. **Vote Analytics** - Aerodrome/veTHE governance integration for bribe optimization
+5. **Rewards Tracker** - Multi-protocol reward opportunity tracking with gas efficiency
+6. **Alert Dispatcher** - Converts triggers into notifications
+7. **Gammaswap Integration** - LP/borrow position risk analytics
+8. **Intelligence Alerts** (`apps/api/src/services/intelligence-alerts.ts`) - Smart insights generation based on historical data
+9. **Digest Service** (`apps/api/src/services/digest.ts`) - Daily digest generation with multiple output formats
 
 ### Data Flow
 - Sync jobs ingest data via external APIs (Alchemy, CoinGecko, protocol APIs)
@@ -77,6 +79,7 @@ npm run test:run --workspace @wedefidaily/api  # Run tests once
 - **Alchemy Service** (`apps/api/src/services/alchemy.ts`) - On-chain balance fetching
 - **CoinGecko Service** (`apps/api/src/services/coingecko.ts`) - Price data enrichment
 - **Performance Service** (`apps/api/src/services/performance.ts`) - P&L calculations and metrics
+- **Risk Analytics Service** (`apps/api/src/services/risk-analytics.ts`) - Portfolio correlation, exposure analysis, and volatility tracking
 - **Governance Service** (`apps/api/src/services/governance.ts`) - ve-token analytics
 - **Rewards Service** (`apps/api/src/services/rewards.ts`) - Cross-protocol reward aggregation
 - **Gammaswap Service** (`apps/api/src/services/gammaswap.ts`) - Position risk assessment
@@ -103,6 +106,11 @@ npm run test:run --workspace @wedefidaily/api  # Run tests once
 - `GET /v1/risk-analytics/volatility` - Historical volatility tracking and analysis
 - `GET /v1/risk-analytics/dashboard` - Comprehensive risk analytics overview
 - `GET /v1/digests` - List generated digests with content
+- `GET /v1/liquidity/wallets/:walletId` - Liquidity metrics and pool analysis for wallet
+- `POST /v1/liquidity/slippage` - Slippage estimates for trades
+- `GET /v1/liquidity/wallets/:walletId/impermanent-loss` - IL analysis for LP positions
+- `GET /v1/liquidity/gammaswap/utilization` - Gammaswap pool utilization and risk metrics
+- `GET /v1/liquidity/pools/top` - Top liquidity pools ranked by TVL/APY/volume
 
 ## Project Management
 

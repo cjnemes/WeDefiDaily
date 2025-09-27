@@ -39,15 +39,18 @@ export const performanceRoutes: FastifyPluginCallback = (app, _opts, done) => {
     const { walletId, timeframe } = parsed.data;
 
     try {
-      // First check if we have cached metrics
-      const cachedMetrics = await prisma.performanceMetric.findUnique({
-        where: {
-          walletId_timeframe: {
-            walletId,
-            timeframe,
+      // First check if we have cached metrics (only if walletId is provided)
+      let cachedMetrics = null;
+      if (walletId) {
+        cachedMetrics = await prisma.performanceMetric.findUnique({
+          where: {
+            walletId_timeframe: {
+              walletId,
+              timeframe,
+            },
           },
-        },
-      });
+        });
+      }
 
       if (cachedMetrics &&
           cachedMetrics.computedAt > new Date(Date.now() - 60 * 60 * 1000)) { // 1 hour cache

@@ -88,7 +88,7 @@ model Token {
   id        String   @id @default(uuid())
   chainId   Int
   address   String   @db.VarChar(64)
-  symbol    String   @db.VarChar(32)
+  symbol    String   @db.VarChar(64)
   name      String
   decimals  Int
   isNative  Boolean  @default(false)
@@ -337,11 +337,15 @@ model GammaswapPool {
   quoteTokenId   String
   baseSymbol     String   @db.VarChar(32)
   quoteSymbol    String   @db.VarChar(32)
-  tvlUsd         Decimal? @db.Decimal(36, 18)
+  tvl            Decimal? @db.Decimal(36, 18) // Total Value Locked
+  tvlUsd         Decimal? @db.Decimal(36, 18) // For backward compatibility
   utilization    Decimal? @db.Decimal(36, 18)
   borrowRateApr  Decimal? @db.Decimal(36, 18)
   supplyRateApr  Decimal? @db.Decimal(36, 18)
+  volume24h      Decimal? @db.Decimal(36, 18) // 24h trading volume
+  feesEarned24h  Decimal? @db.Decimal(36, 18) // 24h fees earned
   metadata       Json?
+  lastSyncAt     DateTime @default(now()) // When pool data was last synced
   updatedAt      DateTime @updatedAt
   createdAt      DateTime @default(now())
 
@@ -681,7 +685,8 @@ model RiskEvent {
   @@index([walletId, createdAt])
   @@index([eventType, severity])
   @@index([isActive])
-=======
+}
+
 model WalletBalanceSnapshot {
   id          String   @id @default(uuid())
   digestRunId String
