@@ -831,3 +831,66 @@ export function fetchRiskAnalyticsDashboard(params?: {
   const query = searchParams.toString() ? `?${searchParams.toString()}` : '';
   return fetchApi<RiskAnalyticsDashboardResponse>(`/v1/risk-analytics/dashboard${query}`);
 }
+
+// ===== SYNC OPERATIONS =====
+
+export interface SyncJobStatus {
+  id: string;
+  job: string;
+  status: 'running' | 'completed' | 'failed';
+  startTime: string;
+  endTime?: string;
+  output?: string;
+  error?: string;
+  progress?: number;
+}
+
+export interface SyncStatusResponse {
+  jobs: SyncJobStatus[];
+  summary: {
+    running: number;
+    completed: number;
+    failed: number;
+  };
+}
+
+export interface TriggerSyncResponse {
+  jobId: string;
+  message: string;
+  status: string;
+}
+
+export interface TriggerAllSyncResponse {
+  jobIds: string[];
+  message: string;
+  totalJobs: number;
+}
+
+export type SyncJobType = 'balances' | 'governance' | 'rewards' | 'gammaswap' | 'performance';
+
+export function triggerSync(job: SyncJobType) {
+  return fetchApi<TriggerSyncResponse>('/v1/sync/trigger', {
+    method: 'POST',
+    body: JSON.stringify({ job }),
+  });
+}
+
+export function triggerAllSync() {
+  return fetchApi<TriggerAllSyncResponse>('/v1/sync/trigger-all', {
+    method: 'POST',
+  });
+}
+
+export function fetchSyncStatus() {
+  return fetchApi<SyncStatusResponse>('/v1/sync/status');
+}
+
+export function fetchSyncJobStatus(jobId: string) {
+  return fetchApi<SyncJobStatus>(`/v1/sync/status/${jobId}`);
+}
+
+export function cleanupOldSyncJobs() {
+  return fetchApi<{ message: string; deletedCount: number; remainingJobs: number }>('/v1/sync/cleanup', {
+    method: 'DELETE',
+  });
+}

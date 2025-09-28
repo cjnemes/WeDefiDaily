@@ -210,11 +210,14 @@ export function DashboardClient() {
           </div>
           <div className="space-y-1 text-sm text-foreground/70">
             <p>Balances update via Alchemy + CoinGecko every sync run.</p>
-            <p className="flex flex-wrap gap-1">
-              <span>Refresh commands:</span>
-              <code className="rounded bg-foreground/10 px-1 py-0.5">npm run sync:balances</code>
-              <span>·</span>
-              <code className="rounded bg-foreground/10 px-1 py-0.5">npm run sync:performance</code>
+            <p className="flex flex-wrap gap-1 items-center">
+              <span>Refresh data:</span>
+              <Link
+                href="/sync"
+                className="rounded bg-purple-500/10 px-2 py-1 text-purple-600 hover:bg-purple-500/20 transition-colors"
+              >
+                🔄 Sync Dashboard
+              </Link>
             </p>
           </div>
         </div>
@@ -250,6 +253,12 @@ export function DashboardClient() {
             className="rounded-lg bg-foreground/10 px-4 py-2 text-sm hover:bg-foreground/20 transition-colors"
           >
             Digest History →
+          </Link>
+          <Link
+            href="/sync"
+            className="rounded-lg bg-purple-500 px-4 py-2 text-sm text-white hover:bg-purple-600 transition-colors"
+          >
+            🔄 Sync Data
           </Link>
           <LoadingButton
             onClick={() => digestMutation.mutate()}
