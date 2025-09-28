@@ -26,3 +26,10 @@ coverage/
 
 # Docker
 postgres-data/
+
+# Development and testing files
+dev-testing/
+.playwright-mcp/
+sync-main-wallet-only.js
+check-missing-tokens.js
+*.bak

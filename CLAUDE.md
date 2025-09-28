@@ -10,10 +10,50 @@ WeDefiDaily is a personal DeFi command center focused on Base-native incentives,
 - `docs/` - Project documentation and runbooks
 
 **IMPORTANT POLICY: NO EXTERNAL INTEGRATIONS**
-- NO Telegram, Slack, Discord, or other chat platform integrations
+- NO third-party chat or messaging platform integrations
 - NO Email delivery services or SMTP configurations
-- NO External notification services beyond console/logs
+- NO external notification services beyond console/logs
 - Focus on local/web-based interfaces only
+
+## UX-First Development Principles
+
+**Current Priority: Phase 6 UX Foundation** - The project has solid technical infrastructure but critical usability barriers that prevent mainstream adoption. All development should prioritize user experience improvements.
+
+### Core UX Principles
+1. **Web UI First** - Prioritize web interface over command-line operations
+   - New features should have web UI from day one
+   - Preserve CLI access for power users, but web UI is primary interface
+   - Never require command-line access for basic application usage
+
+2. **Loading States & Feedback** - Every user action must provide clear feedback
+   - Loading indicators for all async operations
+   - Success/error notifications via toast system
+   - Progress tracking for long-running operations
+   - Prevent double-submissions with loading states
+
+3. **Clean Data Display** - Filter noise, show meaningful information
+   - Default to "valuable tokens only" views (>$1 USD threshold)
+   - Implement spam token detection and filtering
+   - Provide clear, actionable portfolio summaries
+   - Hide technical details unless explicitly requested
+
+4. **Progressive Enhancement** - Layer UX improvements over existing tech
+   - Keep all existing API endpoints and data pipelines
+   - Add UI layers that wrap existing functionality
+   - Maintain backward compatibility for CLI operations
+   - Build incrementally without breaking existing features
+
+### Critical UX Issues (Identified via Playwright Testing)
+- **Wallet Management**: No UI for adding wallets, only curl commands (Issue #53)
+- **Token Spam**: 90+ tokens per wallet including obvious scams (Issue #54)
+- **No Feedback**: Silent buttons, no loading states or notifications (Issue #55)
+- **CLI Dependencies**: All data sync requires command-line access (Issue #56)
+
+### Implementation Guidelines
+- **Test with Real Users**: Use Playwright for comprehensive UX testing
+- **Measure Success**: Track user completion rates, not just technical metrics
+- **Default to Usable**: New features should work for non-technical users by default
+- **Error Handling**: Graceful failures with clear next steps for users
 
 ## Development Commands
 

@@ -3,14 +3,14 @@
 Issue: [#27](https://github.com/cjnemes/WeDefiDaily/issues/27)
 
 ## Goals
-- Support multiple delivery channels in `npm run process:alerts`.
+- Support multiple delivery channels in `npm run process:alerts` when policy allows.
 - Ensure `/v1/alerts` exposes delivery metadata and filtering capabilities.
-- Keep the default experience safe (console-only) while documenting how to enable future integrations (Slack/email).
+- Keep the default experience console-only and document the approval process before any external integration is introduced.
 
 ## Proposed Changes
 1. **Delivery Adapter Interface**
    - Move the existing console adapter to a `deliveries` registry (`apps/api/src/services/alert-delivery.ts`).
-   - Add a `SlackWebhookAdapter` stub that posts to an incoming webhook URL if `SLACK_ALERT_WEBHOOK_URL` is set; otherwise it is skipped gracefully.
+   - Document how to add new adapters while keeping them disabled by default until the no-external-services policy changes.
    - Update adapter result metadata to include a human-readable summary (e.g., `channel` + `messageId`).
 
 2. **Job Enhancements (`process-alerts.ts`)**
@@ -23,20 +23,20 @@ Issue: [#27](https://github.com/cjnemes/WeDefiDaily/issues/27)
    - Add optional `deliveredSince` filter to support dashboards showing “alerts delivered in last 24h”.
 
 4. **Configuration**
-   - Add `SLACK_ALERT_WEBHOOK_URL` (optional) to `.env.example` and document usage in runbook.
-   - Update `docs/runbooks/alerts-processing.md` with configuration steps and CLI examples.
+   - Outline placeholder configuration keys in documentation but keep them commented out until an approved adapter is introduced.
+   - Update `docs/runbooks/alerts-processing.md` with configuration steps and CLI examples when new adapters are sanctioned.
 
 5. **Testing**
-   - Add Vitest unit tests for the adapter registry (mocking fetch for Slack).
+   - Add Vitest unit tests for the adapter registry as additional adapters are added.
    - Add integration-style test for `/v1/alerts?channel=...` verifying filtering.
    - Ensure snapshot/unit tests cover `serializeAlert` ordering of deliveries.
 
 ## Open Questions
-- Do we need deduplication logic per channel (e.g., skip Slack if `metadata` indicates success in last hour)? (Out of scope for #27—document as follow-up.)
-- Should we store Slack message timestamp for easier reconciliation? (Currently planned to store raw webhook response.)
+- Do we need deduplication logic per channel (e.g., skip adapters if `metadata` indicates success in last hour)? (Out of scope for #27—document as follow-up.)
+- Should we store per-channel delivery metadata for easier reconciliation? (Currently planned to store raw webhook response.)
 
 ## Milestones
-1. Adapter registry + Slack stub implementation.
+1. Adapter registry foundation.
 2. Process job summary logging + CLI flag.
 3. API filter improvements.
 4. Docs/runbooks updates.

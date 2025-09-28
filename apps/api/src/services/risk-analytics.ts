@@ -200,93 +200,102 @@ export async function calculatePortfolioCorrelationMatrix(
   walletId: string | null,
   timeframe: '7d' | '30d' | '90d' | '1y'
 ): Promise<CorrelationMatrix> {
-  // Get all tokens in the portfolio
-  const portfolioTokens = await prisma.tokenBalance.findMany({
-    where: {
-      walletId: walletId ? { equals: walletId } : undefined,
-      quantity: {
-        gt: 0,
+  try {
+    // Get all tokens in the portfolio
+    const portfolioTokens = await prisma.tokenBalance.findMany({
+      where: {
+        walletId: walletId ? { equals: walletId } : undefined,
+        quantity: {
+          gt: 0,
+        },
       },
-    },
-    include: {
-      token: true,
-    },
-    orderBy: {
-      usdValue: 'desc',
-    },
-  });
+      include: {
+        token: true,
+      },
+      orderBy: {
+        usdValue: 'desc',
+      },
+    });
 
-  const uniqueTokens = Array.from(
-    new Map(portfolioTokens.map(balance => [balance.token.id, balance.token])).values()
-  );
+    const uniqueTokens = Array.from(
+      new Map(portfolioTokens.map(balance => [balance.token.id, balance.token])).values()
+    );
 
-  const correlationPairs: CorrelationMatrix['tokenPairs'] = [];
+    const correlationPairs: CorrelationMatrix['tokenPairs'] = [];
 
-  // Calculate correlations for all token pairs
-  for (let i = 0; i < uniqueTokens.length; i++) {
-    for (let j = i + 1; j < uniqueTokens.length; j++) {
-      const token1 = uniqueTokens[i];
-      const token2 = uniqueTokens[j];
+    // Calculate correlations for all token pairs
+    for (let i = 0; i < uniqueTokens.length; i++) {
+      for (let j = i + 1; j < uniqueTokens.length; j++) {
+        const token1 = uniqueTokens[i];
+        const token2 = uniqueTokens[j];
 
-      try {
-        const { correlation, pValue } = await calculateTokenCorrelation(
-          token1.id,
-          token2.id,
-          timeframe
-        );
+        try {
+          const { correlation, pValue } = await calculateTokenCorrelation(
+            token1.id,
+            token2.id,
+            timeframe
+          );
 
-        // Determine significance level
-        let significance: 'high' | 'medium' | 'low' | 'none' = 'none';
-        if (pValue) {
-          const pVal = pValue.toNumber();
-          if (pVal < 0.01) significance = 'high';
-          else if (pVal < 0.05) significance = 'medium';
-          else if (pVal < 0.1) significance = 'low';
-        }
+          // Determine significance level
+          let significance: 'high' | 'medium' | 'low' | 'none' = 'none';
+          if (pValue) {
+            const pVal = pValue.toNumber();
+            if (pVal < 0.01) significance = 'high';
+            else if (pVal < 0.05) significance = 'medium';
+            else if (pVal < 0.1) significance = 'low';
+          }
 
-        correlationPairs.push({
-          token1: { id: token1.id, symbol: token1.symbol },
-          token2: { id: token2.id, symbol: token2.symbol },
-          correlation,
-          pValue,
-          significance,
-        });
+          correlationPairs.push({
+            token1: { id: token1.id, symbol: token1.symbol },
+            token2: { id: token2.id, symbol: token2.symbol },
+            correlation,
+            pValue,
+            significance,
+          });
 
-        // Store in database
-        await prisma.assetCorrelation.upsert({
-          where: {
-            token1Id_token2Id_timeframe: {
+          // Store in database
+          await prisma.assetCorrelation.upsert({
+            where: {
+              token1Id_token2Id_timeframe: {
+                token1Id: token1.id,
+                token2Id: token2.id,
+                timeframe,
+              },
+            },
+            update: {
+              correlation,
+              pValue,
+              sampleSize: Math.min(30, 100), // Simplified for now
+              computedAt: new Date(),
+            },
+            create: {
               token1Id: token1.id,
               token2Id: token2.id,
               timeframe,
+              correlation,
+              pValue,
+              sampleSize: Math.min(30, 100),
             },
-          },
-          update: {
-            correlation,
-            pValue,
-            sampleSize: Math.min(30, 100), // Simplified for now
-            computedAt: new Date(),
-          },
-          create: {
-            token1Id: token1.id,
-            token2Id: token2.id,
-            timeframe,
-            correlation,
-            pValue,
-            sampleSize: Math.min(30, 100),
-          },
-        });
-      } catch (error) {
-        console.error(`Failed to calculate correlation for ${token1.symbol}-${token2.symbol}:`, error);
+          });
+        } catch (error) {
+          console.error(`Failed to calculate correlation for ${token1.symbol}-${token2.symbol}:`, error);
+        }
       }
     }
-  }
 
-  return {
-    tokenPairs: correlationPairs,
-    timeframe,
-    computedAt: new Date(),
-  };
+    return {
+      tokenPairs: correlationPairs,
+      timeframe,
+      computedAt: new Date(),
+    };
+  } catch (error) {
+    console.error('Failed to calculate portfolio correlation matrix:', error);
+    return {
+      tokenPairs: [],
+      timeframe,
+      computedAt: new Date(),
+    };
+  }
 }
 
 /**

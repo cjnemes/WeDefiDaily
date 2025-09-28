@@ -1,6 +1,45 @@
 import Decimal from 'decimal.js';
 import { PrismaClient } from '@prisma/client';
 
+Decimal.set({
+  precision: 50,
+  toExpNeg: -50,
+  toExpPos: 50,
+});
+
+function toDecimal(value: unknown): Decimal | null {
+  if (value == null) {
+    return null;
+  }
+
+  if (value instanceof Decimal) {
+    return value;
+  }
+
+  try {
+    if (typeof value === 'bigint') {
+      return new Decimal(value.toString());
+    }
+
+    if (typeof value === 'number' || typeof value === 'string') {
+      return new Decimal(value);
+    }
+
+    if (typeof value === 'object' && 'toString' in value && typeof value.toString === 'function') {
+      return new Decimal(value.toString());
+    }
+  } catch (error) {
+    return null;
+  }
+
+  return null;
+}
+
+function ensureDecimal(value: unknown, fallback = new Decimal(0)): Decimal {
+  const parsed = toDecimal(value);
+  return parsed ?? fallback;
+}
+
 export interface LiquidityMetrics {
   totalLiquidity: Decimal;
   poolCount: number;
@@ -70,39 +109,37 @@ export class LiquidityAnalyticsService {
       ]);
 
       // Pre-filter valid positions for accurate count
-      const validPositions = gammaswapPositions.filter(pos => {
-        try {
-          new Decimal(pos.notional.toString());
-          return true;
-        } catch {
-          return false;
-        }
-      });
+      const validPositions = gammaswapPositions.filter((pos) => toDecimal(pos.notional));
 
       // Calculate total liquidity across all valid positions
-      const totalLiquidity = validPositions.reduce(
-        (sum, pos) => sum.add(new Decimal(pos.notional.toString())),
-        new Decimal(0)
-      );
+      const totalLiquidity = validPositions.reduce((sum, pos) => {
+        const notional = toDecimal(pos.notional);
+        return notional ? sum.add(notional) : sum;
+      }, new Decimal(0));
 
       const poolCount = validPositions.length;
 
       // Calculate average utilization
       const avgUtilization = poolCount > 0
-        ? validPositions.reduce(
-            (sum, pos) => sum.add(pos.pool.utilization ? new Decimal(pos.pool.utilization.toString()) : new Decimal(0)),
-            new Decimal(0)
-          ).div(poolCount)
+        ? validPositions.reduce((sum, pos) => {
+            const utilization = toDecimal(pos.pool.utilization);
+            return utilization ? sum.add(utilization) : sum;
+          }, new Decimal(0)).div(poolCount)
         : new Decimal(0);
 
       // Transform to top pools format
-      const topPools = validPositions.map(pos => {
-        try {
-          const poolTvl = pos.pool.tvl ? new Decimal(pos.pool.tvl.toString()) : new Decimal(0);
-          const userLiquidity = new Decimal(pos.notional.toString());
+      const topPools = validPositions
+        .map((pos) => {
+          const poolTvl = toDecimal(pos.pool.tvl) ?? new Decimal(0);
+          const userLiquidity = toDecimal(pos.notional);
+          const utilization = toDecimal(pos.pool.utilization) ?? new Decimal(0);
+          const apy = toDecimal(pos.pool.supplyRateApr) ?? new Decimal(0);
+
+          if (!userLiquidity) {
+            return null;
+          }
+
           const userShare = poolTvl.gt(0) ? userLiquidity.div(poolTvl) : new Decimal(0);
-          const utilization = pos.pool.utilization ? new Decimal(pos.pool.utilization.toString()) : new Decimal(0);
-          const apy = pos.pool.supplyRateApr ? new Decimal(pos.pool.supplyRateApr.toString()) : new Decimal(0);
 
           return {
             poolId: pos.poolId,
@@ -117,11 +154,9 @@ export class LiquidityAnalyticsService {
               apy,
             }),
           };
-        } catch (error) {
-          // Skip invalid positions
-          return null;
-        }
-      }).filter(pool => pool !== null).sort((a, b) => b.tvl.comparedTo(a.tvl));
+        })
+        .filter((pool): pool is NonNullable<typeof pool> => pool !== null)
+        .sort((a, b) => b.tvl.comparedTo(a.tvl));
 
       // Calculate risk distribution
       const riskDistribution: { [key: string]: Decimal } = {
@@ -247,7 +282,11 @@ export class LiquidityAnalyticsService {
 
     const analysisPositions = await Promise.all(
       positions.map(async (position) => {
-        const currentValue = new Decimal(position.notional.toString());
+        const currentValue = toDecimal(position.notional);
+
+        if (!currentValue) {
+          return null;
+        }
 
         // Get historical snapshots for IL calculation
         const snapshots = await this.prisma.positionSnapshot.findMany({
@@ -275,15 +314,19 @@ export class LiquidityAnalyticsService {
         });
 
         // Calculate HODL value (what the position would be worth if held separately)
-        let hodlValue = currentValue;
+        let hodlValue: Decimal | null = currentValue;
         if (snapshots.length > 0) {
           const initialSnapshot = snapshots[0];
-          hodlValue = new Decimal(initialSnapshot.usdValue.toString());
+          hodlValue = toDecimal(initialSnapshot.usdValue);
         } else if (transactions.length > 0) {
           // Use first transaction as entry point
           const entryTx = transactions[0];
-          hodlValue = new Decimal(entryTx.amount.toString()).mul(new Decimal(entryTx.priceUsd?.toString() || '0'));
+          const amount = toDecimal(entryTx.amount);
+          const price = toDecimal(entryTx.priceUsd ?? 0);
+          hodlValue = amount && price ? amount.mul(price) : null;
         }
+
+        hodlValue = hodlValue ?? currentValue;
 
         const ilUsd = hodlValue.sub(currentValue);
         const ilPercent = hodlValue.gt(0) ? ilUsd.div(hodlValue).mul(100) : new Decimal(0);
@@ -303,15 +346,27 @@ export class LiquidityAnalyticsService {
       })
     );
 
-    const totalILUsd = analysisPositions.reduce((sum, pos) => sum.add(pos.ilUsd), new Decimal(0));
-    const avgILPercent = analysisPositions.length > 0
-      ? analysisPositions.reduce((sum, pos) => sum.add(pos.ilPercent), new Decimal(0)).div(analysisPositions.length)
+    const validAnalysisPositions = analysisPositions.filter(
+      (position): position is NonNullable<typeof position> => position !== null
+    );
+
+    if (validAnalysisPositions.length === 0) {
+      return {
+        totalILUsd: new Decimal(0),
+        avgILPercent: new Decimal(0),
+        positions: [],
+      };
+    }
+
+    const totalILUsd = validAnalysisPositions.reduce((sum, pos) => sum.add(pos.ilUsd), new Decimal(0));
+    const avgILPercent = validAnalysisPositions.length > 0
+      ? validAnalysisPositions.reduce((sum, pos) => sum.add(pos.ilPercent), new Decimal(0)).div(validAnalysisPositions.length)
       : new Decimal(0);
 
     return {
       totalILUsd,
       avgILPercent,
-      positions: analysisPositions,
+      positions: validAnalysisPositions,
     };
   }
 
@@ -333,29 +388,33 @@ export class LiquidityAnalyticsService {
 
     // Calculate average utilization across all pools
     const avgUtilization = pools.length > 0
-      ? pools.reduce(
-          (sum, pool) => sum.add(pool.utilization ? new Decimal(pool.utilization.toString()) : new Decimal(0)),
-          new Decimal(0)
-        ).div(pools.length)
+      ? pools.reduce((sum, pool) => {
+          const utilization = toDecimal(pool.utilization);
+          return utilization ? sum.add(utilization) : sum;
+        }, new Decimal(0)).div(pools.length)
       : new Decimal(0);
 
     // Find high utilization pools (>80%)
     const highUtilizationPools = pools
-      .filter(pool => pool.utilization && new Decimal(pool.utilization.toString()).gt(0.8))
+      .filter((pool) => {
+        const utilization = toDecimal(pool.utilization);
+        return utilization ? utilization.gt(0.8) : false;
+      })
       .map(pool => pool.id);
 
     // Calculate liquidation risk for positions
     const liquidationRisk = positions
-      .filter(pos => pos.healthRatio && new Decimal(pos.healthRatio.toString()).lt(1.2))
-      .map(pos => {
-        const healthRatio = new Decimal(pos.healthRatio?.toString() || '0');
-        const utilization = pos.pool.utilization ? new Decimal(pos.pool.utilization.toString()) : new Decimal(0);
+      .map((pos) => {
+        const healthRatio = toDecimal(pos.healthRatio);
+        const utilization = toDecimal(pos.pool.utilization) ?? new Decimal(0);
 
-        let riskLevel: 'critical' | 'warning' | 'healthy' = 'healthy';
+        if (!healthRatio || !healthRatio.isFinite() || healthRatio.lte(0) || healthRatio.gte(1.2)) {
+          return null;
+        }
+
+        let riskLevel: 'critical' | 'warning' | 'healthy' = 'warning';
         if (healthRatio.lt(1.05)) {
           riskLevel = 'critical';
-        } else if (healthRatio.lt(1.2)) {
-          riskLevel = 'warning';
         }
 
         return {
@@ -365,7 +424,8 @@ export class LiquidityAnalyticsService {
           healthRatio,
           riskLevel,
         };
-      });
+      })
+      .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
 
     return {
       avgUtilization,

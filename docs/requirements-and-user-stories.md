@@ -29,7 +29,7 @@
    - ✅ Integrate basic risk alerts (large price swings, pool imbalance, funding changes where available).
 
 5. **Alerting Layer**
-   - ✅ Support configurable alerts (e.g., Telegram, email, CLI notifications) for claims due, unlock windows, and price thresholds.
+   - ✅ Support configurable alerts (e.g., CLI notifications and local dashboards) for claims due, unlock windows, and price thresholds.
    - ✅ Maintain audit logs to review alert triggers and acknowledgements.
 
 6. **Reporting**
@@ -61,6 +61,6 @@
 
 ## Open Questions
 - Preferred UI modality (web dashboard vs. CLI vs. hybrid)?
-- Notification channel priority (Telegram bot, email, push)?
+- Notification channel priority (console, email, push)?
 - How to integrate private alpha signals or manual strategy notes?
 - Do you require multi-user support in the future?

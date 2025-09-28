@@ -102,7 +102,6 @@ ENABLE_METRICS="true"
 METRICS_PORT="9090"
 
 # External Services
-TELEGRAM_BOT_TOKEN="your_telegram_bot_token"
 SMTP_HOST="your_smtp_host"
 SMTP_USER="your_smtp_user"
 SMTP_PASS="your_smtp_password"

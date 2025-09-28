@@ -15,7 +15,7 @@ async function fetchApi<T>(
     response = await fetch(url, {
       ...options,
       headers: {
-        'Content-Type': 'application/json',
+        ...(options?.body ? { 'Content-Type': 'application/json' } : {}),
         ...options?.headers,
       },
     });

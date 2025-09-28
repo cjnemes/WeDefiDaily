@@ -25,7 +25,7 @@ standby:
 # Monitoring
 monitoring:
   lag_threshold: 50MB
-  alert_channels: ["slack", "pagerduty"]
+  alert_channels: ["console", "pagerduty"]
 ```
 
 #### Tier 2: Automated Backups

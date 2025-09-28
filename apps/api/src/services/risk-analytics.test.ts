@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi, MockedFunction } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { PrismaClient, Prisma } from '@prisma/client';
 import Decimal from 'decimal.js';
 import {
@@ -12,15 +12,7 @@ import {
   VolatilityAnalysis
 } from './risk-analytics';
 
-// Mock Prisma Client
-vi.mock('@prisma/client', () => ({
-  PrismaClient: vi.fn(),
-  Prisma: {
-    sql: vi.fn((strings, ...values) => ({ strings, values })),
-  }
-}));
-
-const mockPrisma = {
+const mockPrisma = vi.hoisted(() => ({
   priceSnapshot: {
     findMany: vi.fn(),
     findFirst: vi.fn(),
@@ -36,35 +28,14 @@ const mockPrisma = {
     upsert: vi.fn(),
   },
   $queryRaw: vi.fn(),
-};
+}));
 
-// Mock the risk analytics module with prisma instance
-vi.mock('./risk-analytics', async () => {
-  const actual = await vi.importActual('./risk-analytics');
-  return {
-    ...actual,
-    prisma: vi.hoisted(() => ({
-      positionSnapshot: {
-        findMany: vi.fn(),
-      },
-      priceSnapshot: {
-        findMany: vi.fn(),
-      },
-      assetCorrelation: {
-        create: vi.fn(),
-        findFirst: vi.fn(),
-      },
-      protocolExposure: {
-        create: vi.fn(),
-        findMany: vi.fn(),
-      },
-      volatilityMetric: {
-        create: vi.fn(),
-        findFirst: vi.fn(),
-      },
-    })),
-  };
-});
+vi.mock('@prisma/client', () => ({
+  PrismaClient: vi.fn(() => mockPrisma),
+  Prisma: {
+    sql: vi.fn((strings, ...values) => ({ strings, values })),
+  },
+}));
 
 describe('Risk Analytics Service', () => {
   beforeEach(() => {
@@ -105,12 +76,14 @@ describe('Risk Analytics Service', () => {
         { priceUsd: new Decimal(100), recordedAt: new Date('2024-01-01') },
         { priceUsd: new Decimal(110), recordedAt: new Date('2024-01-02') }, // +10%
         { priceUsd: new Decimal(120), recordedAt: new Date('2024-01-03') }, // +9.09%
+        { priceUsd: new Decimal(130), recordedAt: new Date('2024-01-04') }, // +8.33%
       ];
 
       const token2Prices = [
         { priceUsd: new Decimal(100), recordedAt: new Date('2024-01-01') },
         { priceUsd: new Decimal(90), recordedAt: new Date('2024-01-02') }, // -10%
         { priceUsd: new Decimal(82), recordedAt: new Date('2024-01-03') }, // -8.89%
+        { priceUsd: new Decimal(75), recordedAt: new Date('2024-01-04') }, // -8.54%
       ];
 
       mockPrisma.priceSnapshot.findMany
@@ -120,7 +93,7 @@ describe('Risk Analytics Service', () => {
       const result = await calculateTokenCorrelation('token1', 'token2', '7d');
 
       expect(result.correlation.toNumber()).toBeLessThan(0); // Negative correlation
-      expect(result.sampleSize).toBe(2);
+      expect(result.sampleSize).toBe(3);
     });
 
     it('should handle insufficient data', async () => {
@@ -675,7 +648,7 @@ describe('Risk Analytics Service', () => {
 
       const result = await calculateTokenCorrelation('token1', 'token2', '7d');
 
-      expect(result.correlation.toNumber()).toBeFinite();
+      expect(Number.isFinite(result.correlation.toNumber())).toBe(true);
     });
 
     it('should handle zero and negative prices', async () => {
@@ -691,7 +664,7 @@ describe('Risk Analytics Service', () => {
       const result = await calculateTokenCorrelation('token1', 'token2', '7d');
 
       expect(result).toBeDefined();
-      expect(result.correlation.toNumber()).toBeFinite();
+      expect(Number.isFinite(result.correlation.toNumber())).toBe(true);
     });
 
     it('should handle precision issues with Decimal calculations', async () => {
@@ -705,7 +678,7 @@ describe('Risk Analytics Service', () => {
 
       const result = await calculateTokenCorrelation('token1', 'token2', '7d');
 
-      expect(result.correlation.toNumber()).toBeFinite();
+      expect(Number.isFinite(result.correlation.toNumber())).toBe(true);
       expect(result.sampleSize).toBe(2);
     });
 

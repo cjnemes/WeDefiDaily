@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi, MockedFunction } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { PrismaClient } from '@prisma/client';
 import Decimal from 'decimal.js';
 import {
@@ -11,12 +11,7 @@ import {
   PriceChange
 } from './performance';
 
-// Mock Prisma Client
-vi.mock('@prisma/client', () => ({
-  PrismaClient: vi.fn()
-}));
-
-const mockPrisma = {
+const mockPrisma = vi.hoisted(() => ({
   portfolioSnapshot: {
     findMany: vi.fn(),
   },
@@ -36,34 +31,12 @@ const mockPrisma = {
   wallet: {
     findMany: vi.fn(),
   },
-};
+}));
 
-// Mock the performance module with prisma instance
-vi.mock('./performance', async () => {
-  const actual = await vi.importActual('./performance');
-  return {
-    ...actual,
-    prisma: vi.hoisted(() => ({
-      portfolioSnapshot: {
-        findMany: vi.fn(),
-        create: vi.fn(),
-      },
-      positionSnapshot: {
-        findMany: vi.fn(),
-      },
-      priceSnapshot: {
-        findMany: vi.fn(),
-      },
-      performanceMetric: {
-        create: vi.fn(),
-        findFirst: vi.fn(),
-      },
-      transaction: {
-        findMany: vi.fn(),
-      },
-    })),
-  };
-});
+// Mock Prisma Client to return our stubbed instance
+vi.mock('@prisma/client', () => ({
+  PrismaClient: vi.fn(() => mockPrisma),
+}));
 
 describe('Performance Service', () => {
   beforeEach(() => {
@@ -569,8 +542,8 @@ describe('Performance Service', () => {
 
       const result = await calculatePerformanceMetrics('wallet1', '7d');
 
-      expect(result.totalReturn.toFixed(9)).toBe('100.864197532');
-      expect(result.totalReturnPercent.toFixed(6)).toBe('10.086173');
+      expect(result.totalReturn.toNumber()).toBeCloseTo(100.864197532, 6);
+      expect(result.totalReturnPercent.toNumber()).toBeCloseTo(10.086173, 2);
     });
 
     it('should handle very small portfolio values', async () => {

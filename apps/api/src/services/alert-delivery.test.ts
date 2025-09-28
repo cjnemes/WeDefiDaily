@@ -5,23 +5,17 @@ describe('createDeliveryAdapters', () => {
   it('always includes the console adapter by default', () => {
     const adapters = createDeliveryAdapters();
     const channels = adapters.map((adapter) => adapter.channel);
-    expect(channels).toContain('console');
-    expect(channels.length).toBe(1);
-  });
-
-  it('adds the Slack adapter when webhook is provided', () => {
-    const adapters = createDeliveryAdapters({ slackWebhookUrl: 'https://hooks.slack.com/services/test/test/test' });
-    const channels = adapters.map((adapter) => adapter.channel);
-    expect(channels).toContain('console');
-    expect(channels).toContain('slack');
+    expect(channels).toEqual(['console']);
   });
 
   it('applies channel filter to adapter list', () => {
-    const adapters = createDeliveryAdapters({
-      slackWebhookUrl: 'https://hooks.slack.com/services/test/test/test',
-      channelFilter: ['slack'],
-    });
+    const adapters = createDeliveryAdapters({ channelFilter: ['console'] });
     const channels = adapters.map((adapter) => adapter.channel);
-    expect(channels).toEqual(['slack']);
+    expect(channels).toEqual(['console']);
+  });
+
+  it('returns empty array when filter excludes console adapter', () => {
+    const adapters = createDeliveryAdapters({ channelFilter: ['webhook'] });
+    expect(adapters).toHaveLength(0);
   });
 });

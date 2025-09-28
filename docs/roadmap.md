@@ -6,7 +6,8 @@
 - ✅ **Phase 2 – Protocol Modules**: Yield tracker, governance modules, and Gammaswap integration with risk assessment complete.
 - ✅ **Phase 3 – Alerts & UX Polish**: Watchlist, digest, and governance dashboards validated; external integrations intentionally deferred.
 - ✅ **Phase 4 – Intelligence Experiments**: Intelligence alerts implemented (PR #39), generating insights from historical data.
-- 🚧 **Phase 5 – Critical Feature Gaps**: P&L tracking, performance metrics, liquidity insights (planning).
+- ✅ **Phase 5 – Critical Feature Gaps**: P&L tracking, performance metrics, liquidity insights, and multi-chain governance complete.
+- 🔄 **Phase 6 – UX Foundation**: User interface improvements, wallet management UI, token filtering, and loading states.
 
 ## Near-Term Focus
 
@@ -39,8 +40,8 @@ See `docs/plans/phase-4-intelligence.md` for strategy. Completed tasks:
 - ✅ Reward decay monitor ([#34](https://github.com/cjnemes/WeDefiDaily/issues/34))
 - ✅ Gammaswap health trend insight ([#35](https://github.com/cjnemes/WeDefiDaily/issues/35))
 
-### Phase 5 – Critical Feature Gaps (🚧 In Progress)
-Addressing missing PRD functionality:
+### Phase 5 – Critical Feature Gaps (✅ Complete)
+Successfully addressed missing PRD functionality:
 - **P&L & Performance Tracking** (✅ Complete - Phase 5a)
   - Historical price snapshots and 24h/7d delta calculations
   - Transaction history tracking with cost basis
@@ -54,11 +55,76 @@ Addressing missing PRD functionality:
   - Impermanent loss calculations for LP positions with breakeven analysis
   - Real wallet integration with live blockchain data validation
 
-- **Advanced Risk Analytics** (🚧 In Progress - Phase 5c)
+- **Advanced Risk Analytics** (✅ Complete - Phase 5c)
   - Cross-position correlation analysis
   - Protocol exposure concentration warnings
   - Historical volatility tracking
   - Risk-adjusted return metrics
+
+- **Multi-Chain Governance Integration** (✅ Complete - Phase 5 Critical)
+  - veTHE on-chain integration for BSC governance tracking
+  - 4-tier fallback strategy for robust data extraction
+  - Rate-limited BSC RPC calls with comprehensive error handling
+  - Enhanced governance sync pipeline supporting both API and on-chain data
+
+### Phase 6 – UX Foundation (🔄 In Progress - 3-4 weeks)
+Following comprehensive UX testing with Playwright, critical usability barriers have been identified that prevent mainstream adoption. Technical infrastructure is solid, but user experience needs foundational improvements.
+
+**Priority 1 – User Interface Essentials** (1-2 weeks)
+- **Wallet Management UI** (High)
+  - Replace curl command requirements with intuitive web forms
+  - Add wallet creation/import interface with address validation
+  - Enable wallet editing, labeling, and removal through UI
+  - Implement bulk wallet operations and chain selection
+
+- **Token Filtering System** (High)
+  - Address spam token pollution (90+ tokens per wallet including scams)
+  - Implement "Show valuable tokens only" toggle with configurable thresholds
+  - Add spam detection heuristics and manual token hiding
+  - Create clean portfolio views focusing on meaningful holdings
+
+- **Loading States & Feedback** (High)
+  - Replace silent button states with proper loading indicators
+  - Add progress feedback for sync operations and API calls
+  - Implement toast notifications for success/error states
+  - Provide clear feedback for all user actions
+
+**Priority 2 – Data Sync UX** (2-3 weeks)
+- **In-App Sync Capabilities** (Medium)
+  - Replace command-line sync requirements with web UI triggers
+  - Add one-click portfolio refresh with progress tracking
+  - Implement background sync status monitoring
+  - Create guided sync workflow for new users
+
+- **Empty State Improvements** (Medium)
+  - Design better first-run experiences with clear next steps
+  - Add sample data modes for demonstration purposes
+  - Create guided onboarding flow for new users
+  - Improve empty state messaging with actionable CTAs
+
+**Priority 3 – Polish & Optimization** (1 week)
+- **Data Display Improvements** (Low)
+  - Fix duplicate token entries (multiple WETH/ETH showing identical data)
+  - Implement proper token grouping and deduplication
+  - Add sortable and filterable portfolio views
+  - Enhance mobile responsive design
+
+- **Chart Implementation** (Low)
+  - Replace "Chart implementation pending" with actual visualizations
+  - Add interactive portfolio performance charts
+  - Implement token price history visualization
+
+**Success Metrics:**
+- New users can add wallets without command-line access
+- Portfolio views show clean, meaningful token lists
+- All user actions provide clear feedback and loading states
+- Zero command-line requirements for basic application usage
+
+**Technical Approach:**
+- Preserve all existing API endpoints and CLI capabilities
+- Add progressive enhancement layers for UI interactions
+- Maintain power-user CLI access while prioritizing web UI
+- Use existing technical infrastructure with improved presentation
 
 ## Long-Range Exploration
 
