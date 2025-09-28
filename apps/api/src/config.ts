@@ -45,9 +45,11 @@ const envSchema = z.object({
 
   // Protocol APIs
   AERODROME_API_URL: z.string().optional(),
-  AERODROME_SUBGRAPH_URL: z.string().optional(),
+  AERODROME_SUBGRAPH_URL: z.string().url().default('https://api.studio.thegraph.com/query/52327/aerodrome-v2/version/latest'),
   THENA_API_URL: z.string().optional(),
+  THENA_SUBGRAPH_URL: z.string().url().default('https://api.thegraph.com/subgraphs/name/thena/bsc-v1'),
   GAMMASWAP_API_URL: z.string().optional(),
+  THE_GRAPH_API_KEY: z.string().optional(),
 
   // Operational Configuration
   GOVERNANCE_REFRESH_INTERVAL_MINUTES: z.coerce.number().int().positive().default(30),

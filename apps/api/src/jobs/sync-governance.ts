@@ -40,7 +40,7 @@ const GOVERNANCE_PROTOCOLS: GovernanceProtocolConfig[] = [
     apiUrl: null, // Thena doesn't have REST API
     bscRpcUrl: env.ALCHEMY_BSC_RPC_URL || env.BSC_RPC_URL,
     enhancedLockFetcher: fetchThenaLockEnhanced, // Uses on-chain BSC integration
-    bribeFetcher: undefined, // Will implement subgraph integration later
+    bribeFetcher: fetchThenaBribes, // Uses subgraph integration
   },
 ];
 

@@ -13,7 +13,7 @@ Map each roadmap bullet to a GitHub issue so progress and reviews stay traceable
 | Phase 3a | Alerting & digest runner setup | [#15](https://github.com/cjnemes/WeDefiDaily/issues/15) | ✅ Done (closed) |
 | Phase 3a | Daily digest content + channels | [#18](https://github.com/cjnemes/WeDefiDaily/issues/18) | ✅ Done (closed) |
 | Phase 3a | Core infrastructure delivery | [PR #22](https://github.com/cjnemes/WeDefiDaily/pull/22) | 🔄 Under review |
-| Phase 3a | External delivery channels (Telegram, Email) | [#23](https://github.com/cjnemes/WeDefiDaily/issues/23) | 🚫 Omitted (out of scope) |
+| Phase 3a | External delivery channels (Telegram, Email) | [#23](https://github.com/cjnemes/WeDefiDaily/issues/23) | 🚫 **PERMANENTLY OUT OF SCOPE** |
 | Phase 3b | Governance dashboard polish | [#25](https://github.com/cjnemes/WeDefiDaily/issues/25) | ✅ Done (merged PR #29) |
 | Phase 3b | Price watchlist polish | [#26](https://github.com/cjnemes/WeDefiDaily/issues/26) | 🚧 In progress |
 | Phase 3b | Advanced UX enhancements | [#19](https://github.com/cjnemes/WeDefiDaily/issues/19) | 🔄 Under review (PR #24) |
@@ -25,9 +25,9 @@ Map each roadmap bullet to a GitHub issue so progress and reviews stay traceable
 | Phase 4 | Intelligence alerts integration | [PR #39](https://github.com/cjnemes/WeDefiDaily/pull/39) | ✅ Merged |
 
 | Phase 5a | P&L and performance tracking | [#41](https://github.com/cjnemes/WeDefiDaily/issues/41) | ✅ Done |
-| Phase 5b | Liquidity analytics integration | [#42](https://github.com/cjnemes/WeDefiDaily/issues/42) | ✅ Done |
-| Phase 5c | Advanced risk analytics | [#44](https://github.com/cjnemes/WeDefiDaily/issues/44) | ✅ Done (ready for PR) |
+| Phase 5b | Liquidity analytics integration | [#42](https://github.com/cjnemes/WeDefiDaily/issues/42) | ✅ Done (closed) |
+| Phase 5c | Advanced risk analytics | [#43](https://github.com/cjnemes/WeDefiDaily/issues/43) | ✅ Done (closed) |
 | Phase 5 Critical | Base token pricing integration (AERO/MORPHO/DRV) | [#49](https://github.com/cjnemes/WeDefiDaily/issues/49) | ✅ Done (PR #50) |
-| Phase 5 Critical | veTHE On-Chain Integration | [#51](https://github.com/cjnemes/WeDefiDaily/issues/51) | 🚧 In progress |
+| Phase 5 Critical | veTHE On-Chain Integration | [#51](https://github.com/cjnemes/WeDefiDaily/issues/51) | ✅ Done (merged PR #52) |
 
 Update this table whenever you open/close issues so the roadmap and GitHub board stay in sync.

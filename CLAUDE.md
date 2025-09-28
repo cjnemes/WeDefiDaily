@@ -9,6 +9,12 @@ WeDefiDaily is a personal DeFi command center focused on Base-native incentives,
 - `apps/web` - Next.js frontend with Tailwind CSS v4
 - `docs/` - Project documentation and runbooks
 
+**IMPORTANT POLICY: NO EXTERNAL INTEGRATIONS**
+- NO Telegram, Slack, Discord, or other chat platform integrations
+- NO Email delivery services or SMTP configurations
+- NO External notification services beyond console/logs
+- Focus on local/web-based interfaces only
+
 ## Development Commands
 
 ### Setup & Database

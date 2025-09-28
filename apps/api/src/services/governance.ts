@@ -1,6 +1,7 @@
 import Decimal from 'decimal.js';
 import { z } from 'zod';
 import { BSCContractService, createBSCContractService } from './bsc-contract.js';
+import { env } from '../config.js';
 
 export interface NormalizedLock {
   address: string;
@@ -107,41 +108,116 @@ function decimalFromString(value: string | undefined): Decimal | undefined {
   }
 }
 
+/**
+ * Execute GraphQL query against The Graph Protocol subgraph
+ */
+async function executeGraphQLQuery(
+  subgraphUrl: string,
+  query: string,
+  variables?: Record<string, unknown>
+): Promise<unknown> {
+  try {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    // Add The Graph API key if configured
+    if (env.THE_GRAPH_API_KEY) {
+      headers['Authorization'] = `Bearer ${env.THE_GRAPH_API_KEY}`;
+    }
+
+    const response = await fetch(subgraphUrl, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        query,
+        variables,
+      }),
+    });
+
+    if (!response.ok) {
+      console.warn(`GraphQL request failed: ${response.status} ${response.statusText}`);
+      return null;
+    }
+
+    const result = await response.json() as any;
+
+    if (result.errors) {
+      console.warn('GraphQL errors:', result.errors);
+      return null;
+    }
+
+    return result.data;
+  } catch (error) {
+    console.warn('GraphQL query execution failed:', error);
+    return null;
+  }
+}
+
 export async function fetchAerodromeLock(
   apiUrl: string,
   address: string
 ): Promise<NormalizedLock | null> {
-  const payload = await safeFetchJson(`${apiUrl.replace(/\/$/, '')}/locks?address=${address}`);
-  if (!payload) {
+  // Use subgraph instead of deprecated REST API
+  const subgraphUrl = env.AERODROME_SUBGRAPH_URL;
+  if (!subgraphUrl) {
+    console.warn('Aerodrome subgraph URL not configured, falling back to mock data');
     return null;
   }
 
-  const parsedArray = z.array(lockSchema).safeParse(payload);
-  const parsedObject = lockSchema.safeParse(payload);
+  const query = `
+    query GetVeNFTs($owner: String!) {
+      veNFTs(
+        where: { owner: $owner }
+        orderBy: votingPower
+        orderDirection: desc
+      ) {
+        id
+        locked
+        lockEnd
+        votingPower
+        owner
+      }
+    }
+  `;
 
-  const data = parsedArray.success
-    ? parsedArray.data.find((lock) => lock.address.toLowerCase() === address.toLowerCase())
-    : parsedObject.success
-      ? parsedObject.data
-      : null;
+  const data = await executeGraphQLQuery(subgraphUrl, query, {
+    owner: address.toLowerCase(),
+  });
 
-  if (!data) {
+  if (!data || !(data as any).veNFTs || (data as any).veNFTs.length === 0) {
     return null;
   }
 
-  const lockAmount = decimalFromString(data.lockAmount);
-  const votingPower = decimalFromString(data.votingPower);
+  const veNFTs = (data as any).veNFTs;
 
-  if (!lockAmount || !votingPower) {
+  // Aggregate all veNFT positions for this address
+  let totalLockAmount = new Decimal(0);
+  let totalVotingPower = new Decimal(0);
+  let latestLockEnd = 0;
+
+  for (const veNFT of veNFTs) {
+    if (veNFT.locked) {
+      totalLockAmount = totalLockAmount.add(new Decimal(veNFT.locked).div(1e18));
+    }
+    if (veNFT.votingPower) {
+      totalVotingPower = totalVotingPower.add(new Decimal(veNFT.votingPower).div(1e18));
+    }
+    if (veNFT.lockEnd && parseInt(veNFT.lockEnd) > latestLockEnd) {
+      latestLockEnd = parseInt(veNFT.lockEnd);
+    }
+  }
+
+  if (totalLockAmount.eq(0) && totalVotingPower.eq(0)) {
     return null;
   }
 
   return {
     address,
-    lockAmount,
-    votingPower,
-    boostMultiplier: data.boostMultiplier ? new Decimal(data.boostMultiplier) : undefined,
-    lockEndsAt: data.unlockTimestamp ? new Date(data.unlockTimestamp * 1000) : undefined,
+    lockAmount: totalLockAmount,
+    votingPower: totalVotingPower,
+    boostMultiplier: totalLockAmount.gt(0) ? totalVotingPower.div(totalLockAmount) : undefined,
+    lockEndsAt: latestLockEnd > 0 ? new Date(latestLockEnd * 1000) : undefined,
     protocolSlug: 'aerodrome',
   } satisfies NormalizedLock;
 }
@@ -362,3 +438,4 @@ export async function fetchThenaBribes(apiUrl: string): Promise<NormalizedBribe[
 
   return results;
 }
+
