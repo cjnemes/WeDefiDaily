@@ -16,6 +16,8 @@ import { riskAnalyticsRoutes } from './routes/risk-analytics';
 import { digestRoutes } from './routes/digest';
 import { liquidityAnalyticsRoutes } from './routes/liquidity-analytics';
 import { syncRoutes } from './routes/sync';
+import { opportunityRoutes } from './routes/opportunities';
+import { gasEstimationRoutes } from './routes/gas-estimation';
 import { getHealthCheckService } from './services/health-check';
 
 export interface BuildAppOptions {
@@ -127,6 +129,8 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   await app.register(digestRoutes, { prefix: '/v1/digest' });
   await app.register(liquidityAnalyticsRoutes, { prefix: '/v1/liquidity' });
   await app.register(syncRoutes, { prefix: '/v1/sync' });
+  await app.register(opportunityRoutes, { prefix: '/v1/opportunities' });
+  await app.register(gasEstimationRoutes, { prefix: '/v1/gas' });
 
   return app;
 }

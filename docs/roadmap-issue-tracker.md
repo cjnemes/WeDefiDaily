@@ -43,4 +43,10 @@ All critical UX barriers have been eliminated. WeDefiDaily is now a fully user-f
 **📈 PORTFOLIO CHARTS IMPLEMENTED!**
 Interactive portfolio performance charts with Recharts library, featuring responsive design, tooltips, and timeframe integration.
 
+**🚀 PHASE 7 - ADVANCED ANALYTICS & INTELLIGENCE INITIATED**
+
+| Phase 7 (Analytics) | Opportunity Detection Engine | TBD | 🔄 In Progress (Cross-protocol yield scanner) |
+| Phase 7 (Analytics) | Enhanced Risk Intelligence | TBD | 📋 Planned (Portfolio risk scoring) |
+| Phase 7 (Analytics) | Executive Intelligence Dashboard | TBD | 📋 Planned (Opportunity summary view) |
+
 Update this table whenever you open/close issues so the roadmap and GitHub board stay in sync.

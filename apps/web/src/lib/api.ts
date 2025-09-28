@@ -894,3 +894,133 @@ export function cleanupOldSyncJobs() {
     method: 'DELETE',
   });
 }
+
+// Opportunity Detection API Types
+export interface YieldOpportunity {
+  id: string;
+  type: 'yield_migration' | 'new_yield' | 'compound_yield';
+  protocolFrom?: string;
+  protocolTo: string;
+  poolId: string;
+  poolAddress: string;
+  tokenPair: string;
+  currentApy: string;
+  opportunityApy: string;
+  apyDifference: string;
+  tvlUsd: string;
+  volume24hUsd: string;
+  estimatedGasCostUsd: string;
+  breakEvenAmountUsd: string;
+  potentialGainUsd: string;
+  riskScore: string;
+  timeToBreakEven: number;
+  recommendedAction: string;
+  confidence: string;
+  lastUpdated: string;
+}
+
+export interface ClaimOpportunity {
+  id: string;
+  protocolSlug: string;
+  walletAddress: string;
+  rewardTokenSymbol: string;
+  rewardAmount: string;
+  rewardValueUsd: string;
+  estimatedGasCostUsd: string;
+  netGainUsd: string;
+  roiPercent: string;
+  claimDeadline?: string;
+  urgencyScore: string;
+  batchingPotential: ClaimBatchingInfo[];
+  recommendedClaimTime: string;
+  reasonCode: string;
+}
+
+export interface ClaimBatchingInfo {
+  protocolSlug: string;
+  rewardValueUsd: string;
+  combinedGasSavingsUsd: string;
+}
+
+export interface OpportunityDetectionResponse {
+  summary: {
+    totalPotentialGainUsd: string;
+    highConfidenceOpportunities: number;
+    urgentActions: number;
+    estimatedTimeToReview: number;
+  };
+  yieldOpportunities?: YieldOpportunity[];
+  claimOpportunities?: ClaimOpportunity[];
+}
+
+export interface YieldOpportunitiesResponse {
+  opportunities: YieldOpportunity[];
+  summary: {
+    totalOpportunities: number;
+    totalPotentialGainUsd: string;
+    averageConfidence: string;
+  };
+}
+
+export interface ClaimOpportunitiesResponse {
+  opportunities: ClaimOpportunity[];
+  summary: {
+    totalOpportunities: number;
+    totalPotentialGainUsd: string;
+    urgentClaims: number;
+    averageRoi: string;
+  };
+}
+
+export interface OpportunityQueryParams {
+  walletId: string;
+  type?: 'yield' | 'claim' | 'all';
+  limit?: number;
+  minConfidence?: number;
+}
+
+// Opportunity Detection API Functions
+export function fetchOpportunities(params: OpportunityQueryParams) {
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined) {
+      query.append(key, value.toString());
+    }
+  });
+
+  return fetchApi<OpportunityDetectionResponse>(`/v1/opportunities/detect?${query}`);
+}
+
+export function fetchYieldOpportunities(params: OpportunityQueryParams) {
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined) {
+      query.append(key, value.toString());
+    }
+  });
+
+  return fetchApi<YieldOpportunitiesResponse>(`/v1/opportunities/yield?${query}`);
+}
+
+export function fetchClaimOpportunities(params: OpportunityQueryParams) {
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined) {
+      query.append(key, value.toString());
+    }
+  });
+
+  return fetchApi<ClaimOpportunitiesResponse>(`/v1/opportunities/claims?${query}`);
+}
+
+export function fetchOpportunityHealth() {
+  return fetchApi<{
+    status: string;
+    timestamp: string;
+    engine: string;
+    testResult: {
+      yieldOpportunities: number;
+      claimOpportunities: number;
+    };
+  }>('/v1/opportunities/health');
+}
