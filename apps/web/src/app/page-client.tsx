@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 import { Watchlist } from '@/components/watchlist';
 import { useToast } from '@/components/toast';
 import { LoadingButton, LoadingSkeleton } from '@/components/loading';
@@ -11,6 +12,13 @@ import {
   fetchPerformanceMetrics,
   triggerDigest,
 } from '@/lib/api';
+import {
+  filterTokenBalances,
+  getFilterStats,
+  DEFAULT_FILTERS,
+  type FilterMode,
+  type TokenBalance
+} from '@/lib/token-filter';
 
 // Import formatting functions and types
 import {
@@ -56,6 +64,7 @@ const sections = [
 
 export function DashboardClient() {
   const { addToast } = useToast();
+  const [filterMode, setFilterMode] = useState<FilterMode>('valuable');
 
   const { data: portfolio, isLoading: portfolioLoading, error: portfolioError } = useQuery({
     queryKey: ['portfolio'],
@@ -100,6 +109,22 @@ export function DashboardClient() {
 
   const totalUsd = portfolio ? formatCurrency(portfolio.meta.totalUsd, "—") : "—";
   const wallets = portfolio?.data ?? [];
+
+  // Apply filtering to wallet balances
+  const filteredWallets = wallets.map(wallet => {
+    const filteredBalances = filterTokenBalances(
+      wallet.balances as TokenBalance[],
+      filterMode === 'valuable' ? DEFAULT_FILTERS.PORTFOLIO_OVERVIEW :
+      filterMode === 'no-spam' ? DEFAULT_FILTERS.DETAILED_VIEW :
+      DEFAULT_FILTERS.COMPLETE_VIEW
+    );
+
+    return {
+      ...wallet,
+      balances: filteredBalances,
+      filterStats: getFilterStats(wallet.balances as TokenBalance[], filteredBalances)
+    };
+  });
 
   const totalVotingPower = governance
     ? governance.data.locks.reduce((acc, lock) => acc + Number(lock.votingPower), 0)
@@ -288,17 +313,57 @@ export function DashboardClient() {
           </Link>
         </section>
 
+        {/* Token Filter Controls */}
+        <section className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <h2 className="text-xl font-semibold text-foreground">Portfolio Holdings</h2>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setFilterMode('valuable')}
+                className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                  filterMode === 'valuable'
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-foreground/10 text-foreground/70 hover:bg-foreground/20'
+                }`}
+              >
+                Valuable Only (≥$1)
+              </button>
+              <button
+                onClick={() => setFilterMode('no-spam')}
+                className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                  filterMode === 'no-spam'
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-foreground/10 text-foreground/70 hover:bg-foreground/20'
+                }`}
+              >
+                Hide Spam
+              </button>
+              <button
+                onClick={() => setFilterMode('all')}
+                className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                  filterMode === 'all'
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-foreground/10 text-foreground/70 hover:bg-foreground/20'
+                }`}
+              >
+                Show All
+              </button>
+            </div>
+          </div>
+        </section>
+
         {/* Wallet Cards */}
         <section className="grid gap-4 md:grid-cols-2">
-          {wallets.length === 0 ? (
+          {filteredWallets.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-foreground/15 bg-foreground/5 p-6 text-sm text-foreground/70">
               <p>No wallets synced yet. Add one via the API (`POST /v1/wallets`) then run the balance sync job.</p>
             </div>
           ) : (
-            wallets.map((entry) => {
+            filteredWallets.map((entry) => {
               const label = entry.wallet.label ?? shortenAddress(entry.wallet.address);
               const walletTotal = formatCurrency(entry.totals.usdValue, "—");
               const topBalances = entry.balances.slice(0, 4);
+              const { filterStats } = entry;
 
               return (
                 <article
@@ -320,7 +385,7 @@ export function DashboardClient() {
 
                   <div className="space-y-2 text-sm text-foreground/80">
                     {topBalances.length === 0 ? (
-                      <p>No non-zero balances tracked yet.</p>
+                      <p>No tokens match current filter.</p>
                     ) : (
                       topBalances.map((balance) => (
                         <div
@@ -344,6 +409,18 @@ export function DashboardClient() {
                       ))
                     )}
                   </div>
+
+                  {/* Filter Statistics */}
+                  {filterStats.filtered > 0 && (
+                    <div className="text-xs text-foreground/50 border-t border-foreground/10 pt-2">
+                      <p>
+                        Showing {filterStats.shown} of {filterStats.total} tokens
+                        {filterStats.filtered > 0 && (
+                          <span> · {filterStats.filtered} filtered</span>
+                        )}
+                      </p>
+                    </div>
+                  )}
 
                   <div className="mt-auto flex justify-end text-xs text-foreground/50">
                     <Link href={`/wallets/${entry.wallet.id}`} className="underline-offset-4 hover:underline">

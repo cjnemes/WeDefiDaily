@@ -21,8 +21,8 @@ WeDefiDaily is a personal DeFi command center focused on Base-native incentives,
 
 ### Phase 6 Progress Status
 - **Issue #53 (Wallet Management UI)**: ✅ **COMPLETED** - Users can now add/edit/delete wallets via web interface instead of curl commands
-- **Issue #55 (Loading States)**: 📝 **NEXT PRIORITY** - Universal loading states and user feedback across all interactions
-- **Issue #54 (Token Filtering)**: 🚧 **HIGH PRIORITY** - Spam detection and meaningful portfolio views (>$1 threshold)
+- **Issue #55 (Loading States)**: ✅ **COMPLETED** - Universal loading states and toast notifications provide clear user feedback
+- **Issue #54 (Token Filtering)**: ✅ **COMPLETED** - Smart spam detection with three filtering modes (Valuable/$1+, Hide Spam, Show All)
 - **Issue #56 (In-App Sync)**: 📝 **FINAL MILESTONE** - Eliminate CLI dependencies for data sync operations
 
 ### Core UX Principles
