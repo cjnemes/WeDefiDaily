@@ -10,9 +10,37 @@ To keep implementation aligned with the roadmap and maintain high signal in GitH
 - **Share milestones** – drop comments when major steps land (schema pushed, job runs, UI screenshot, etc.) so reviewers have context before the PR arrives.
 
 ## Pull Requests
+
+### **MANDATORY: Rigorous Testing Validation**
+
+**Before any PR can be approved, ALL features must pass rigorous testing:**
+
+```bash
+# REQUIRED: All PRs must run and pass these tests
+npm run test:rigorous                  # All APIs must return live data
+npm run test:mock-detection           # Must reject demo data leaks
+npm run test:live-apis                # External integrations must work
+```
+
+**Live Data Verification Requirements:**
+- ✅ **Live API Data**: External APIs return fresh data (<10 minutes old)
+- ❌ **REJECT**: Rate limited APIs returning cached data
+- ❌ **REJECT**: Demo portfolio values ($2,150, mock addresses)
+- ❌ **REJECT**: Stale data or fallback behavior claimed as "working"
+
+### **Test-Guardian Agent Requirement**
+
+**Every PR must include test-guardian agent validation:**
+1. Launch test-guardian agent to review testing approach
+2. Agent must verify live data vs fallback distinction
+3. Include agent's assessment in PR description
+4. Agent rejection = PR cannot be approved
+
+### **Standard PR Requirements**
+
 - **Branch naming** – continue using `phase-<roadmap-id>/<short-description>` (e.g., `phase-2c/gammaswap-fetcher`) so context is obvious.
 - **Mandatory PR template** – `.github/PULL_REQUEST_TEMPLATE.md` enumerates linked issues, validation commands, rollout steps, documentation updates, and risk notes. Fill out each section candidly; unchecked boxes must include an explanation.
-- **Evidence required** – include logs/output from `npm run sync:...`, `npm run process:alerts`, screenshots of UI states, or database queries as appropriate. Attachments should also be pasted back into the originating issue.
+- **Evidence required** – include logs/output from rigorous testing, live API responses, screenshots of UI states, or database queries. **Demo data screenshots are NOT acceptable evidence.**
 - **Manage scope** – aim for <400 LOC per PR. If work spans backend + frontend + runbooks, split into staged PRs referencing the same issue.
 - **Post-merge hygiene** – close the issue via `Fixes #123`, update `docs/roadmap-issue-tracker.md`, and note follow-up tasks in the issue before closing.
 

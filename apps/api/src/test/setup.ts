@@ -91,14 +91,26 @@ export class TestDatabase {
   async createTestWallet(data: {
     address: string;
     label?: string;
-    chain?: string;
+    chainId?: number;
   }) {
+    // Ensure Base chain exists
+    const baseChain = await this.prisma.chain.upsert({
+      where: { id: 8453 },
+      update: {},
+      create: {
+        id: 8453,
+        name: 'Base',
+        shortName: 'base',
+        nativeCurrencySymbol: 'ETH',
+        explorerUrl: 'https://basescan.org',
+      },
+    });
+
     return this.prisma.wallet.create({
       data: {
         address: data.address.toLowerCase(),
         label: data.label || `Test Wallet ${data.address}`,
-        chain: data.chain || 'base',
-        isActive: true,
+        chainId: data.chainId || baseChain.id,
       },
     });
   }
@@ -111,15 +123,28 @@ export class TestDatabase {
     symbol: string;
     name?: string;
     decimals?: number;
-    chain?: string;
+    chainId?: number;
   }) {
+    // Ensure Base chain exists
+    const baseChain = await this.prisma.chain.upsert({
+      where: { id: 8453 },
+      update: {},
+      create: {
+        id: 8453,
+        name: 'Base',
+        shortName: 'base',
+        nativeCurrencySymbol: 'ETH',
+        explorerUrl: 'https://basescan.org',
+      },
+    });
+
     return this.prisma.token.create({
       data: {
         address: data.address.toLowerCase(),
         symbol: data.symbol,
         name: data.name || `Test ${data.symbol}`,
         decimals: data.decimals || 18,
-        chain: data.chain || 'base',
+        chainId: data.chainId || baseChain.id,
       },
     });
   }
@@ -209,16 +234,26 @@ export class TestDatabase {
   async createTestProtocol(data: {
     name: string;
     slug?: string;
-    category?: string;
-    chain?: string;
+    chainId?: number;
   }) {
+    // Ensure Base chain exists
+    const baseChain = await this.prisma.chain.upsert({
+      where: { id: 8453 },
+      update: {},
+      create: {
+        id: 8453,
+        name: 'Base',
+        shortName: 'base',
+        nativeCurrencySymbol: 'ETH',
+        explorerUrl: 'https://basescan.org',
+      },
+    });
+
     return this.prisma.protocol.create({
       data: {
         name: data.name,
         slug: data.slug || data.name.toLowerCase().replace(/\s+/g, '-'),
-        category: data.category || 'dex',
-        chain: data.chain || 'base',
-        isActive: true,
+        chainId: data.chainId || baseChain.id,
       },
     });
   }

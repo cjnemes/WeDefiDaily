@@ -179,9 +179,71 @@ Copy `.env.example` to `.env` and configure:
 - API keys for Alchemy, CoinGecko, protocol integrations
 - Without API keys, jobs will use mock data for development
 
-## Testing Strategy
+## Rigorous Testing Strategy
 
-- Unit tests with Vitest for service modules
-- Mock services available (e.g., `gammaswap-mock.ts`) for testing without API dependencies
-- Integration tests validate full data sync workflows
-- CI runs lint, typecheck, and Prisma validation on all PRs
+### **CRITICAL: Live Data vs Fallback Distinction**
+
+All development must follow **Rigorous Testing Standards** that distinguish between:
+- ✅ **Feature Success**: Live external API data received and processed
+- ⚠️ **Fallback Behavior**: Mock/demo data served (NOT considered success)
+- ❌ **Failure**: Rate limits, stale data, or system errors
+
+### **Testing Framework Levels**
+
+**1. Rigorous Validation Tests (Production Readiness)**
+```bash
+npm run test:rigorous                  # All APIs must return live data
+npm run test:live-apis                # External integrations must work
+npm run test:mock-detection           # Detect and reject demo data leaks
+npm run test:production-validation    # End-to-end live data flow
+```
+
+**2. Standard Development Tests**
+```bash
+npm run test --workspace @wedefidaily/api      # Unit tests with Vitest
+npm run test:run --workspace @wedefidaily/api  # Integration tests
+```
+
+### **Mandatory Testing Standards**
+
+**Before any feature is considered "working":**
+1. **Live Data Verification**: Must fetch real data from external APIs
+2. **Mock Data Detection**: Must reject any demo values (e.g., $2,150 portfolio)
+3. **Data Freshness**: Timestamps must be within 10 minutes
+4. **Rate Limit Handling**: Must fail if APIs are rate limited
+5. **Business Logic Validation**: Realistic variance in financial calculations
+
+**Test Requirements for External Integrations:**
+- **Aerodrome**: Live Base chain governance data (not cached)
+- **Alchemy**: Fresh blockchain balances (not demo endpoint)
+- **CoinGecko**: Live market prices (<10 minutes old)
+- **Blocknative**: Real-time Base network gas prices
+
+### **Failure-First Testing Principles**
+
+**Tests SHOULD FAIL when:**
+- APIs return cached/stale data → **FAIL**
+- Demo portfolio values detected → **FAIL**
+- Rate limiting encountered → **FAIL**
+- Mock data indicators present → **FAIL**
+
+**Only PASS when:**
+- Live external API data received
+- Data timestamps within 10 minutes
+- No mock/demo data indicators
+- Realistic financial variance
+- API response times 100ms-5s
+
+### **Test Guard Integration**
+
+**Mandatory test-guardian agent usage:**
+- Launch test-guardian for all new feature testing
+- Agent must verify live data vs fallback distinction
+- Agent will reject "fallback success" claims
+- Agent ensures rigorous standards compliance
+
+**Example Test Guard Usage:**
+```bash
+# Before claiming any feature works
+Task subagent_type="test-guardian" "Review [feature] testing approach and verify live data integration"
+```
