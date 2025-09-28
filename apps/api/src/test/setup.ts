@@ -138,13 +138,23 @@ export class TestDatabase {
       },
     });
 
-    return this.prisma.token.create({
-      data: {
-        address: data.address.toLowerCase(),
+    const chainId = data.chainId || baseChain.id;
+    const address = data.address.toLowerCase();
+
+    return this.prisma.token.upsert({
+      where: {
+        chainId_address: {
+          chainId: chainId,
+          address: address,
+        },
+      },
+      update: {},
+      create: {
+        address: address,
         symbol: data.symbol,
         name: data.name || `Test ${data.symbol}`,
         decimals: data.decimals || 18,
-        chainId: data.chainId || baseChain.id,
+        chainId: chainId,
       },
     });
   }
@@ -249,10 +259,14 @@ export class TestDatabase {
       },
     });
 
-    return this.prisma.protocol.create({
-      data: {
+    const slug = data.slug || data.name.toLowerCase().replace(/\s+/g, '-');
+
+    return this.prisma.protocol.upsert({
+      where: { slug },
+      update: {},
+      create: {
         name: data.name,
-        slug: data.slug || data.name.toLowerCase().replace(/\s+/g, '-'),
+        slug: slug,
         chainId: data.chainId || baseChain.id,
       },
     });
@@ -297,23 +311,102 @@ export class TestDatabase {
    */
   async createTestGammaswapPosition(data: {
     walletId: string;
-    poolId: string;
+    poolId?: string;
+    protocolId?: string;
+    assetTokenId?: string;
     positionType?: 'LP' | 'Borrow';
     notional: string;
     healthRatio?: string;
     debtValue?: string;
-    collateralValue?: string;
   }) {
-    return this.prisma.gammaswapPosition.create({
-      data: {
+    // Create a test protocol if not provided
+    let protocolId = data.protocolId;
+    if (!protocolId) {
+      const protocol = await this.createTestProtocol({
+        name: 'Gammaswap',
+        slug: 'gammaswap',
+      });
+      protocolId = protocol.id;
+    }
+
+    // Create test tokens for pool if needed
+    const ethToken = await this.createTestToken({
+      address: '0x4200000000000000000000000000000000000006',
+      symbol: 'WETH',
+      name: 'Wrapped ETH',
+    });
+
+    const usdcToken = await this.createTestToken({
+      address: '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913',
+      symbol: 'USDC',
+      name: 'USD Coin',
+      decimals: 6,
+    });
+
+    // Create a test pool if not provided or if provided poolId doesn't exist
+    let poolId = data.poolId;
+    if (!poolId) {
+      const pool = await this.createTestGammaswapPool({
+        poolAddress: `0x${Math.random().toString(16).substring(2, 42).padStart(40, '0')}`,
+        baseTokenId: ethToken.id,
+        quoteTokenId: usdcToken.id,
+        protocolId: protocolId,
+        baseSymbol: 'WETH',
+        quoteSymbol: 'USDC',
+      });
+      poolId = pool.id;
+    } else {
+      // Check if the provided poolId exists, if not create it
+      try {
+        await this.prisma.gammaswapPool.findUniqueOrThrow({
+          where: { id: poolId }
+        });
+      } catch {
+        // Pool doesn't exist, create it
+        const pool = await this.createTestGammaswapPool({
+          poolAddress: `0x${Math.random().toString(16).substring(2, 42).padStart(40, '0')}`,
+          baseTokenId: ethToken.id,
+          quoteTokenId: usdcToken.id,
+          protocolId: protocolId,
+          baseSymbol: 'WETH',
+          quoteSymbol: 'USDC',
+        });
+        poolId = pool.id;
+      }
+    }
+
+    // Create a test token if not provided
+    let assetTokenId = data.assetTokenId;
+    if (!assetTokenId) {
+      assetTokenId = ethToken.id;
+    }
+
+    // Use upsert to handle unique constraint on (protocolId, poolId, walletId, positionType)
+    return this.prisma.gammaswapPosition.upsert({
+      where: {
+        protocolId_poolId_walletId_positionType: {
+          protocolId: protocolId,
+          poolId: poolId,
+          walletId: data.walletId,
+          positionType: data.positionType || 'LP',
+        },
+      },
+      update: {
+        notional: data.notional,
+        healthRatio: data.healthRatio || '1.5',
+        debtValue: data.debtValue || '0',
+        lastSyncAt: new Date(),
+      },
+      create: {
         walletId: data.walletId,
-        poolId: data.poolId,
+        poolId: poolId,
+        protocolId: protocolId,
+        assetTokenId: assetTokenId,
         positionType: data.positionType || 'LP',
         notional: data.notional,
         healthRatio: data.healthRatio || '1.5',
         debtValue: data.debtValue || '0',
-        collateralValue: data.collateralValue || data.notional,
-        lastUpdated: new Date(),
+        lastSyncAt: new Date(),
       },
     });
   }

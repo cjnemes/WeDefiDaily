@@ -253,56 +253,10 @@ export class OpportunityDetectionEngine {
       }
     }
 
-    // Add demo opportunities for Phase 7 foundation
+    // Production should not serve demo data - if no live opportunities found, return empty
     if (opportunities.length === 0) {
-      const pools = await this.getHighYieldPools();
-
-      // Demo opportunity 1: Aerodrome AERO/USDC
-      opportunities.push({
-        id: `demo_yield_aerodrome_aero_usdc`,
-        type: 'new_yield',
-        protocolTo: 'aerodrome',
-        poolId: 'aerodrome_aero_usdc',
-        poolAddress: '0x2223f9FE624F69Da4D8256A7bCc9104FBA7F8f75',
-        tokenPair: 'AERO/USDC',
-        currentApy: new Decimal(0),
-        opportunityApy: new Decimal(0.24),
-        apyDifference: new Decimal(0.24),
-        tvlUsd: new Decimal('2500000'),
-        volume24hUsd: new Decimal('180000'),
-        estimatedGasCostUsd: new Decimal('15'),
-        breakEvenAmountUsd: new Decimal('22.81'), // $15 / 0.24 * 365
-        potentialGainUsd: new Decimal('1200'), // $5K * 24%
-        riskScore: new Decimal('20'), // Low risk
-        timeToBreakEven: 5, // 5 days
-        recommendedAction: 'Add $5,000 to Aerodrome AERO/USDC pool for 24% APY',
-        confidence: new Decimal('85'),
-        lastUpdated: new Date(),
-      });
-
-      // Demo opportunity 2: Morpho yield migration
-      opportunities.push({
-        id: `demo_migration_morpho_yield`,
-        type: 'yield_migration',
-        protocolFrom: 'compound',
-        protocolTo: 'morpho',
-        poolId: 'morpho_morpho_weth',
-        poolAddress: '0xc1256Ae5FF1cf2719D4937adb3bbCCab2E00A2Ca',
-        tokenPair: 'MORPHO/WETH',
-        currentApy: new Decimal(0.12), // Current 12% APY
-        opportunityApy: new Decimal(0.31), // Morpho 31% APY
-        apyDifference: new Decimal(0.19), // 19% improvement
-        tvlUsd: new Decimal('4200000'),
-        volume24hUsd: new Decimal('95000'),
-        estimatedGasCostUsd: new Decimal('25'),
-        breakEvenAmountUsd: new Decimal('48.03'), // $25 / 0.19 * 365
-        potentialGainUsd: new Decimal('950'), // $5K * 19%
-        riskScore: new Decimal('35'), // Medium risk
-        timeToBreakEven: 10, // 10 days
-        recommendedAction: 'Migrate $5,000 from Compound to Morpho for 19% APY boost',
-        confidence: new Decimal('78'),
-        lastUpdated: new Date(),
-      });
+      console.warn('⚠️ No live yield opportunities found - check external API configurations');
+      console.warn('💡 Configure protocol APIs in .env for live opportunity detection');
     }
 
     return opportunities;

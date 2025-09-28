@@ -1,4 +1,4 @@
-import { getMockGammaswapData } from './gammaswap-mock';
+// Removed mock data import - production should not serve mock data
 
 export interface GammaswapPoolData {
   poolAddress: string;
@@ -261,7 +261,16 @@ function normalizePositionEntry(
 
 export const fetchGammaswapData: GammaswapFetcher = async (ctx) => {
   if (!ctx.apiUrl) {
-    return getMockGammaswapData(ctx);
+    console.warn('⚠️ Gammaswap API URL not configured - no data available');
+    console.warn('💡 Configure GAMMASWAP_API_URL in .env for live Gammaswap data');
+    return {
+      pools: [],
+      positions: [],
+      totalLiquidity: '0',
+      totalDebt: '0',
+      healthScore: 1.0,
+      timestamp: new Date().toISOString(),
+    };
   }
 
   const url = resolveUrl(ctx.apiUrl, ctx.walletAddress);

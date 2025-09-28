@@ -28,6 +28,30 @@ interface RequestMetrics {
   lastResetTime: number;
 }
 
+/**
+ * Data Source Authentication for Alchemy blockchain data
+ */
+export interface AlchemyDataSource {
+  source: 'live' | 'fallback' | 'mock' | 'unknown';
+  timestamp: Date;
+  apiEndpoint?: string;
+  confidence: 'high' | 'medium' | 'low';
+  rateLimited?: boolean;
+  errorDetails?: string;
+  responseTimeMs?: number;
+  isDemo?: boolean;
+}
+
+export interface AuthenticatedAlchemyData<T> {
+  data: T | null;
+  metadata: AlchemyDataSource;
+  validationChecks: {
+    isFreshData: boolean;
+    isRealisticData: boolean;
+    hasLiveCharacteristics: boolean;
+  };
+}
+
 export class AlchemyService {
   private requestQueue: Array<() => Promise<void>> = [];
   private metrics: RequestMetrics = {
@@ -37,20 +61,57 @@ export class AlchemyService {
     lastResetTime: Date.now(),
   };
 
+  private readonly isDemo: boolean;
+  private readonly hasValidApiKey: boolean;
+
   constructor(
     private rpcUrl: string,
-    private rateLimitConfig: RateLimitConfig = {
-      maxRequestsPerSecond: 25, // Conservative default for free tier
-      maxComputeUnitsPerSecond: 100,
-      burstLimit: 50,
-    },
+    private rateLimitConfig?: RateLimitConfig,
     private retryConfig: RetryConfig = {
       maxRetries: 3,
       baseDelayMs: 1000,
       maxDelayMs: 30000,
       backoffMultiplier: 2,
     }
-  ) {}
+  ) {
+    // Detect if using demo endpoint or real API key
+    this.isDemo = rpcUrl.includes('/v2/demo') || rpcUrl.includes('demo');
+    this.hasValidApiKey = !this.isDemo && rpcUrl.includes('/v2/') && rpcUrl.length > 50;
+
+    // Set rate limits based on API tier
+    if (!rateLimitConfig) {
+      if (this.isDemo) {
+        // Very conservative for demo endpoint
+        this.rateLimitConfig = {
+          maxRequestsPerSecond: 5,
+          maxComputeUnitsPerSecond: 20,
+          burstLimit: 10,
+        };
+      } else if (this.hasValidApiKey) {
+        // More generous for authenticated API
+        this.rateLimitConfig = {
+          maxRequestsPerSecond: 100,
+          maxComputeUnitsPerSecond: 300,
+          burstLimit: 200,
+        };
+      } else {
+        // Conservative fallback
+        this.rateLimitConfig = {
+          maxRequestsPerSecond: 25,
+          maxComputeUnitsPerSecond: 100,
+          burstLimit: 50,
+        };
+      }
+    } else {
+      this.rateLimitConfig = rateLimitConfig;
+    }
+
+    if (this.isDemo) {
+      console.warn('⚠️ Using Alchemy demo endpoint - expect rate limiting and cached data');
+      console.warn('💡 For live data: Set ALCHEMY_BASE_RPC_URL to your API key URL in .env');
+      console.warn('📖 Get API key: https://www.alchemy.com/');
+    }
+  }
 
   private async throttledRequest<T>(
     request: () => Promise<T>,
@@ -233,6 +294,35 @@ export class AlchemyService {
           .filter((token: TokenBalanceResult) => token.rawBalance > BigInt(0));
       }, 15); // alchemy_getTokenBalances costs ~15 CU
     }, `getWalletTokenBalances(${address})`);
+  }
+
+  /**
+   * Health check that clearly identifies demo vs live API status
+   */
+  getApiStatus(): {
+    isDemo: boolean;
+    hasValidApiKey: boolean;
+    rateLimitConfig: RateLimitConfig;
+    metrics: RequestMetrics;
+    recommendation: string;
+  } {
+    let recommendation = '';
+
+    if (this.isDemo) {
+      recommendation = 'Using demo endpoint. For live data, configure ALCHEMY_BASE_RPC_URL with your API key';
+    } else if (this.hasValidApiKey) {
+      recommendation = 'Using authenticated API - should provide live data';
+    } else {
+      recommendation = 'API configuration unclear - check ALCHEMY_BASE_RPC_URL format';
+    }
+
+    return {
+      isDemo: this.isDemo,
+      hasValidApiKey: this.hasValidApiKey,
+      rateLimitConfig: this.rateLimitConfig,
+      metrics: { ...this.metrics },
+      recommendation,
+    };
   }
 
   async getTokenMetadataBatch(contractAddresses: string[]): Promise<Map<string, TokenMetadataResult>> {
