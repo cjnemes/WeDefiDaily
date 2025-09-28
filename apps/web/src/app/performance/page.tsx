@@ -9,6 +9,7 @@ import {
   fetchTokenPriceChanges,
 } from '@/lib/api';
 import { formatCurrency, formatPercentage } from '@/lib/format';
+import { PortfolioChart } from '@/components/portfolio-chart';
 
 type Timeframe = '24h' | '7d' | '30d' | '90d' | '1y' | 'all';
 
@@ -178,24 +179,7 @@ export default function PerformancePage() {
             <div className="mt-6 h-64 animate-pulse rounded bg-foreground/10" />
           ) : history.length > 0 ? (
             <div className="mt-6 rounded border border-foreground/10 bg-background/40 p-4">
-              <p className="text-sm text-foreground/70">
-                Chart implementation pending. Data available:
-              </p>
-              <div className="mt-4 max-h-40 overflow-y-auto">
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  {history.slice(0, 10).map((point, i) => (
-                    <div key={`history-${point.date}-${i}`} className="flex justify-between rounded bg-foreground/5 p-2">
-                      <span>{new Date(point.date).toLocaleDateString()}</span>
-                      <span>{formatCurrency(point.value)}</span>
-                    </div>
-                  ))}
-                  {history.length > 10 && (
-                    <p className="col-span-2 text-center text-foreground/50">
-                      ... and {history.length - 10} more points
-                    </p>
-                  )}
-                </div>
-              </div>
+              <PortfolioChart data={history} height={320} />
             </div>
           ) : (
             <div className="mt-6 rounded border border-dashed border-foreground/20 p-8 text-center">

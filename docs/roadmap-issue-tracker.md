@@ -38,4 +38,9 @@ Map each roadmap bullet to a GitHub issue so progress and reviews stay traceable
 **🎉 PHASE 6 UX FOUNDATION - COMPLETE! 🎉**
 All critical UX barriers have been eliminated. WeDefiDaily is now a fully user-friendly web application.
 
+| Phase 7 (Enhanced UX) | Portfolio Performance Charts | N/A | ✅ Done (implemented with Recharts) |
+
+**📈 PORTFOLIO CHARTS IMPLEMENTED!**
+Interactive portfolio performance charts with Recharts library, featuring responsive design, tooltips, and timeframe integration.
+
 Update this table whenever you open/close issues so the roadmap and GitHub board stay in sync.
