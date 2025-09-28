@@ -184,7 +184,7 @@ export default function PerformancePage() {
               <div className="mt-4 max-h-40 overflow-y-auto">
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   {history.slice(0, 10).map((point, i) => (
-                    <div key={i} className="flex justify-between rounded bg-foreground/5 p-2">
+                    <div key={`history-${point.date}-${i}`} className="flex justify-between rounded bg-foreground/5 p-2">
                       <span>{new Date(point.date).toLocaleDateString()}</span>
                       <span>{formatCurrency(point.value)}</span>
                     </div>
@@ -233,9 +233,9 @@ export default function PerformancePage() {
             </div>
           ) : priceChanges.length > 0 ? (
             <div className="mt-6 space-y-2">
-              {priceChanges.map((change) => (
+              {priceChanges.map((change, index) => (
                 <div
-                  key={change.tokenId}
+                  key={`${change.tokenId}-${index}`}
                   className="flex items-center justify-between rounded-lg border border-foreground/10 bg-background/40 px-4 py-3"
                 >
                   <div>

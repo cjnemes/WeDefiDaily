@@ -4,7 +4,6 @@
 
 import { PrismaClient } from '@prisma/client';
 import { createAlchemyService } from './alchemy-enhanced';
-import { getChainConfig } from './chain-config';
 
 export interface HealthStatus {
   status: 'healthy' | 'degraded' | 'unhealthy';
@@ -103,7 +102,8 @@ export class HealthCheckService {
       const walletCount = await this.prisma.wallet.count();
 
       // Test write performance with a simple operation
-      await this.prisma.$executeRaw`SELECT pg_advisory_lock(12345); SELECT pg_advisory_unlock(12345);`;
+      await this.prisma.$executeRaw`SELECT pg_advisory_lock(12345)`;
+      await this.prisma.$executeRaw`SELECT pg_advisory_unlock(12345)`;
 
       const responseTime = Date.now() - startTime;
 
@@ -139,36 +139,39 @@ export class HealthCheckService {
     const startTime = Date.now();
 
     try {
-      const apiKey = process.env.ALCHEMY_API_KEY;
-      if (!apiKey) {
+      // Check for available RPC URLs
+      const baseRpcUrl = process.env.ALCHEMY_BASE_RPC_URL;
+      const ethRpcUrl = process.env.ALCHEMY_ETH_RPC_URL;
+      const bscRpcUrl = process.env.ALCHEMY_BSC_RPC_URL;
+
+      if (!baseRpcUrl && !ethRpcUrl && !bscRpcUrl) {
         return {
           status: 'unhealthy',
           lastChecked: new Date().toISOString(),
-          error: 'ALCHEMY_API_KEY not configured',
+          error: 'No Alchemy RPC URLs configured',
         };
       }
 
-      // Test with Base chain (most commonly used)
-      const baseConfig = getChainConfig(8453);
+      // Test with the first available RPC URL (prioritize Base)
+      const rpcUrl = baseRpcUrl || ethRpcUrl || bscRpcUrl;
       const alchemyService = createAlchemyService(
-        apiKey,
-        (process.env.ALCHEMY_TIER as any) || 'free',
-        baseConfig
+        rpcUrl!,
+        (process.env.ALCHEMY_TIER as any) || 'free'
       );
 
-      // Perform a simple health check call
-      const healthCheck = await alchemyService.healthCheck();
+      // Perform a simple health check call with a test address
+      const testAddress = '0x0000000000000000000000000000000000000000';
+      await alchemyService.getWalletNativeBalance(testAddress);
       const responseTime = Date.now() - startTime;
 
       return {
-        status: healthCheck.status,
+        status: 'healthy',
         responseTime,
         lastChecked: new Date().toISOString(),
         details: {
-          metrics: healthCheck.metrics,
-          rateLimitState: healthCheck.rateLimitState,
-          circuitBreakerOpen: healthCheck.circuitBreakerOpen,
           tier: process.env.ALCHEMY_TIER || 'free',
+          rpcUrl: rpcUrl!.split('/').slice(0, -1).join('/') + '/***', // Hide API key
+          testSuccessful: true,
         },
       };
     } catch (error) {
