@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Watchlist } from '@/components/watchlist';
+import { useToast } from '@/components/toast';
+import { LoadingButton, LoadingSkeleton } from '@/components/loading';
 import {
   fetchPortfolio,
   fetchGovernance,
@@ -53,23 +55,47 @@ const sections = [
 ];
 
 export function DashboardClient() {
-  const { data: portfolio } = useQuery({
+  const { addToast } = useToast();
+
+  const { data: portfolio, isLoading: portfolioLoading, error: portfolioError } = useQuery({
     queryKey: ['portfolio'],
     queryFn: fetchPortfolio,
   });
 
-  const { data: governance } = useQuery({
+  const { data: governance, isLoading: governanceLoading } = useQuery({
     queryKey: ['governance'],
     queryFn: fetchGovernance,
   });
 
-  const { data: performance } = useQuery({
+  const { data: performance, isLoading: performanceLoading } = useQuery({
     queryKey: ['performance', '24h'],
     queryFn: () => fetchPerformanceMetrics({ timeframe: '24h' }),
   });
 
   const digestMutation = useMutation({
     mutationFn: () => triggerDigest(),
+    onMutate: () => {
+      addToast({
+        type: 'loading',
+        title: 'Generating digest...',
+        description: 'This may take a few seconds',
+        duration: 0, // Persistent until success/error
+      });
+    },
+    onSuccess: (data) => {
+      addToast({
+        type: 'success',
+        title: 'Digest generated successfully!',
+        description: `Run ID: ${data.data.run.id.slice(0, 8)}...`,
+      });
+    },
+    onError: (error) => {
+      addToast({
+        type: 'error',
+        title: 'Failed to generate digest',
+        description: error instanceof Error ? error.message : 'Something went wrong',
+      });
+    },
   });
 
   const totalUsd = portfolio ? formatCurrency(portfolio.meta.totalUsd, "—") : "—";
@@ -111,34 +137,51 @@ export function DashboardClient() {
             <p className="text-xs uppercase tracking-[0.24em] text-foreground/50">
               Total Portfolio Value
             </p>
-            <p className="mt-2 text-3xl font-semibold text-foreground">{totalUsd}</p>
+            {portfolioLoading ? (
+              <LoadingSkeleton className="mt-2 h-9" />
+            ) : (
+              <p className="mt-2 text-3xl font-semibold text-foreground">{totalUsd}</p>
+            )}
           </div>
           <div>
             <p className="text-xs uppercase tracking-[0.24em] text-foreground/50">
               24h Performance
             </p>
-            <p className={`mt-2 text-2xl font-semibold ${
-              performance?.data && parseFloat(performance.data.totalReturnPercent) >= 0
-                ? 'text-green-500'
-                : 'text-red-500'
-            }`}>
-              {performance?.data ? formatPercentage(performance.data.totalReturnPercent) : '—'}
-            </p>
-            <p className={`text-sm ${
-              performance?.data && parseFloat(performance.data.totalReturn) >= 0
-                ? 'text-green-500'
-                : 'text-red-500'
-            }`}>
-              {performance?.data ? formatCurrency(performance.data.totalReturn) : '—'}
-            </p>
+            {performanceLoading ? (
+              <>
+                <LoadingSkeleton className="mt-2 h-8" />
+                <LoadingSkeleton className="mt-1 h-5" />
+              </>
+            ) : (
+              <>
+                <p className={`mt-2 text-2xl font-semibold ${
+                  performance?.data && parseFloat(performance.data.totalReturnPercent) >= 0
+                    ? 'text-green-500'
+                    : 'text-red-500'
+                }`}>
+                  {performance?.data ? formatPercentage(performance.data.totalReturnPercent) : '—'}
+                </p>
+                <p className={`text-sm ${
+                  performance?.data && parseFloat(performance.data.totalReturn) >= 0
+                    ? 'text-green-500'
+                    : 'text-red-500'
+                }`}>
+                  {performance?.data ? formatCurrency(performance.data.totalReturn) : '—'}
+                </p>
+              </>
+            )}
           </div>
           <div>
             <p className="text-xs uppercase tracking-[0.24em] text-foreground/50">
               Wallets Tracked
             </p>
-            <p className="mt-2 text-3xl font-semibold text-foreground">
-              {portfolio?.meta.wallets ?? 0}
-            </p>
+            {portfolioLoading ? (
+              <LoadingSkeleton className="mt-2 h-9" />
+            ) : (
+              <p className="mt-2 text-3xl font-semibold text-foreground">
+                {portfolio?.meta.wallets ?? 0}
+              </p>
+            )}
           </div>
           <div className="space-y-1 text-sm text-foreground/70">
             <p>Balances update via Alchemy + CoinGecko every sync run.</p>
@@ -183,13 +226,13 @@ export function DashboardClient() {
           >
             Digest History →
           </Link>
-          <button
+          <LoadingButton
             onClick={() => digestMutation.mutate()}
-            disabled={digestMutation.isPending}
-            className="rounded-lg bg-blue-500 px-4 py-2 text-sm text-white hover:bg-blue-600 transition-colors"
+            isLoading={digestMutation.isPending}
+            className="rounded-lg bg-blue-500 px-4 py-2 text-sm text-white hover:bg-blue-600 transition-colors disabled:opacity-50"
           >
-            {digestMutation.isPending ? 'Generating…' : 'Generate Digest'}
-          </button>
+            Generate Digest
+          </LoadingButton>
         </nav>
 
         {digestMutation.isSuccess && digestMutation.data && (

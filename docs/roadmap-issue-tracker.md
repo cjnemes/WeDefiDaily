@@ -30,4 +30,9 @@ Map each roadmap bullet to a GitHub issue so progress and reviews stay traceable
 | Phase 5 Critical | Base token pricing integration (AERO/MORPHO/DRV) | [#49](https://github.com/cjnemes/WeDefiDaily/issues/49) | ✅ Done (PR #50) |
 | Phase 5 Critical | veTHE On-Chain Integration | [#51](https://github.com/cjnemes/WeDefiDaily/issues/51) | ✅ Done (merged PR #52) |
 
+| Phase 6 (UX Foundation) | Wallet Management UI | [#53](https://github.com/cjnemes/WeDefiDaily/issues/53) | ✅ Done (merged) |
+| Phase 6 (UX Foundation) | Token Filtering and Spam Detection | [#54](https://github.com/cjnemes/WeDefiDaily/issues/54) | 🚧 In progress |
+| Phase 6 (UX Foundation) | Loading States and User Feedback | [#55](https://github.com/cjnemes/WeDefiDaily/issues/55) | 📝 **NEXT PRIORITY** |
+| Phase 6 (UX Foundation) | In-App Data Sync Capabilities | [#56](https://github.com/cjnemes/WeDefiDaily/issues/56) | 📝 Backlog |
+
 Update this table whenever you open/close issues so the roadmap and GitHub board stay in sync.
