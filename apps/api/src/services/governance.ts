@@ -1,6 +1,7 @@
 import Decimal from 'decimal.js';
 import { z } from 'zod';
 import { BSCContractService, createBSCContractService } from './bsc-contract.js';
+import { createVeAeroContractService, VeAeroContractService } from './veaero-contract.js';
 import { env } from '../config.js';
 
 export interface NormalizedLock {
@@ -178,8 +179,8 @@ export interface AuthenticatedGovernanceData<T> {
 }
 
 /**
- * Enhanced Aerodrome lock fetcher using live Sugar contract integration
- * Implements rigorous data source authentication
+ * Enhanced Aerodrome lock fetcher using live veAERO contract integration
+ * Implements rigorous data source authentication and replaces stale subgraph dependency
  */
 export async function fetchAerodromeLock(
   apiUrl: string,
@@ -201,7 +202,8 @@ export async function fetchAerodromeLock(
 }
 
 /**
- * Authenticated Aerodrome lock fetcher with full data source tracking
+ * Authenticated Aerodrome lock fetcher with live veAERO contract integration
+ * Replaces stale subgraph dependency with direct blockchain calls
  */
 export async function fetchAerodromeLockAuthenticated(
   apiUrl: string,
@@ -210,12 +212,31 @@ export async function fetchAerodromeLockAuthenticated(
   const startTime = Date.now();
 
   try {
-    // Use live Sugar contract integration instead of subgraph
-    const { getAerodromePoolService } = await import('./aerodrome-pools.js');
-    const aerodromeService = getAerodromePoolService();
+    // Validate that we have Base RPC URL configured
+    if (!env.ALCHEMY_BASE_RPC_URL) {
+      return {
+        data: null,
+        metadata: {
+          source: 'fallback',
+          timestamp: new Date(),
+          confidence: 'low',
+          rateLimited: false,
+          errorDetails: 'ALCHEMY_BASE_RPC_URL not configured for live veAERO integration',
+          responseTimeMs: Date.now() - startTime,
+        },
+        validationChecks: {
+          isFreshData: false,
+          isRealisticData: false,
+          hasLiveCharacteristics: false,
+        },
+      };
+    }
+
+    // Initialize live veAERO contract service
+    const veAeroService = createVeAeroContractService(env.ALCHEMY_BASE_RPC_URL);
 
     // Perform health check first to validate live connectivity
-    const healthCheck = await aerodromeService.healthCheck();
+    const healthCheck = await veAeroService.healthCheck();
 
     if (healthCheck.status === 'unhealthy') {
       return {
@@ -225,7 +246,7 @@ export async function fetchAerodromeLockAuthenticated(
           timestamp: new Date(),
           confidence: 'low',
           rateLimited: false,
-          errorDetails: `Sugar contract unhealthy: ${healthCheck.details.error}`,
+          errorDetails: `veAERO contract unhealthy: ${healthCheck.details.error}`,
           responseTimeMs: Date.now() - startTime,
         },
         validationChecks: {
@@ -236,13 +257,8 @@ export async function fetchAerodromeLockAuthenticated(
       };
     }
 
-    // For governance data, we need to call the Sugar contract directly with the user's address
-    // This is a placeholder - the actual implementation would need veAERO contract integration
-    // TODO: Implement direct veAERO contract calls via Sugar contract
-
-    // Temporary implementation using subgraph as fallback until veAERO integration is complete
-    const subgraphUrl = env.AERODROME_SUBGRAPH_URL;
-    if (!subgraphUrl) {
+    // Ensure we're using live integration, not demo/mock
+    if (!veAeroService.isLiveIntegration()) {
       return {
         data: null,
         metadata: {
@@ -250,7 +266,7 @@ export async function fetchAerodromeLockAuthenticated(
           timestamp: new Date(),
           confidence: 'low',
           rateLimited: false,
-          errorDetails: 'Aerodrome subgraph URL not configured and veAERO integration incomplete',
+          errorDetails: 'veAERO service configured with demo/mock RPC, not live integration',
           responseTimeMs: Date.now() - startTime,
         },
         validationChecks: {
@@ -261,112 +277,79 @@ export async function fetchAerodromeLockAuthenticated(
       };
     }
 
-    const query = `
-      query GetVeNFTs($owner: String!) {
-        veNFTs(
-          where: { owner: $owner }
-          orderBy: votingPower
-          orderDirection: desc
-        ) {
-          id
-          locked
-          lockEnd
-          votingPower
-          owner
-        }
-      }
-    `;
-
-    const data = await executeGraphQLQuery(subgraphUrl, query, {
-      owner: address.toLowerCase(),
-    });
-
+    // Fetch live veAERO data from contract
+    const result = await veAeroService.getAggregatedVeAeroData(address);
     const responseTime = Date.now() - startTime;
 
-    // Validate that we got live data, not cached/stale
-    const isLiveData = validateGraphQLResponseFreshness(data, responseTime);
-
-    if (!data || !(data as any).veNFTs) {
+    if (!result.success) {
       return {
         data: null,
         metadata: {
-          source: isLiveData ? 'live' : 'fallback',
+          source: 'fallback',
           timestamp: new Date(),
-          confidence: 'medium',
-          rateLimited: responseTime < 100, // Suspiciously fast = likely cached
-          errorDetails: 'No veNFT data returned from subgraph',
+          confidence: 'low',
+          rateLimited: false,
+          errorDetails: `veAERO contract call failed: ${result.error}`,
           responseTimeMs: responseTime,
         },
         validationChecks: {
-          isFreshData: isLiveData,
+          isFreshData: false,
           isRealisticData: false,
-          hasLiveCharacteristics: responseTime >= 100,
+          hasLiveCharacteristics: false,
         },
       };
     }
 
-    const veNFTs = (data as any).veNFTs;
+    const veAeroData = result.data!;
 
-    // Aggregate all veNFT positions for this address
-    let totalLockAmount = new Decimal(0);
-    let totalVotingPower = new Decimal(0);
-    let latestLockEnd = 0;
+    // Validate data freshness - live contract calls should take reasonable time
+    const isFreshData = validateContractResponseFreshness(responseTime);
+    const hasRealisticData = validateGovernanceDataRealism(veAeroData.totalLockAmount, veAeroData.totalVotingPower);
 
-    for (const veNFT of veNFTs) {
-      if (veNFT.locked) {
-        totalLockAmount = totalLockAmount.add(new Decimal(veNFT.locked).div(1e18));
-      }
-      if (veNFT.votingPower) {
-        totalVotingPower = totalVotingPower.add(new Decimal(veNFT.votingPower).div(1e18));
-      }
-      if (veNFT.lockEnd && parseInt(veNFT.lockEnd) > latestLockEnd) {
-        latestLockEnd = parseInt(veNFT.lockEnd);
-      }
-    }
-
-    const hasRealisticData = validateGovernanceDataRealism(totalLockAmount, totalVotingPower);
-
-    if (totalLockAmount.eq(0) && totalVotingPower.eq(0)) {
+    // Return null if no positions (but mark as successful live call)
+    if (veAeroData.totalLockAmount.eq(0) && veAeroData.totalVotingPower.eq(0)) {
       return {
         data: null,
         metadata: {
-          source: isLiveData ? 'live' : 'fallback',
+          source: 'live',
           timestamp: new Date(),
           confidence: 'high',
           rateLimited: false,
+          apiEndpoint: `veAERO contract ${healthCheck.details.contractAddress}`,
           responseTimeMs: responseTime,
         },
         validationChecks: {
-          isFreshData: isLiveData,
+          isFreshData: isFreshData,
           isRealisticData: true, // No positions is realistic
-          hasLiveCharacteristics: responseTime >= 100,
+          hasLiveCharacteristics: true,
         },
       };
     }
 
+    // Transform veAERO data to NormalizedLock format
     const lockData: NormalizedLock = {
       address,
-      lockAmount: totalLockAmount,
-      votingPower: totalVotingPower,
-      boostMultiplier: totalLockAmount.gt(0) ? totalVotingPower.div(totalLockAmount) : undefined,
-      lockEndsAt: latestLockEnd > 0 ? new Date(latestLockEnd * 1000) : undefined,
+      lockAmount: veAeroData.totalLockAmount,
+      votingPower: veAeroData.totalVotingPower,
+      boostMultiplier: veAeroData.boostMultiplier,
+      lockEndsAt: veAeroData.nextExpiration,
       protocolSlug: 'aerodrome',
     };
 
     return {
       data: lockData,
       metadata: {
-        source: isLiveData ? 'live' : 'fallback',
+        source: 'live',
         timestamp: new Date(),
-        apiEndpoint: subgraphUrl,
+        apiEndpoint: `veAERO contract ${healthCheck.details.contractAddress}`,
         confidence: hasRealisticData ? 'high' : 'medium',
         rateLimited: false,
         responseTimeMs: responseTime,
       },
       validationChecks: {
-        isFreshData: isLiveData,
+        isFreshData: isFreshData,
         isRealisticData: hasRealisticData,
-        hasLiveCharacteristics: responseTime >= 100,
+        hasLiveCharacteristics: true,
       },
     };
 
@@ -391,7 +374,26 @@ export async function fetchAerodromeLockAuthenticated(
 }
 
 /**
+ * Validate that contract response represents fresh, live data
+ * Contract calls should take reasonable time indicating live blockchain interaction
+ */
+function validateContractResponseFreshness(responseTimeMs: number): boolean {
+  // Response should take reasonable time (not cached/mock)
+  if (responseTimeMs < 50) {
+    return false; // Too fast = likely cached/mock data
+  }
+
+  // Response should not be extremely slow
+  if (responseTimeMs > 30000) {
+    return false; // Too slow = likely degraded service or rate limited
+  }
+
+  return true;
+}
+
+/**
  * Validate that GraphQL response represents fresh, live data
+ * @deprecated - Use validateContractResponseFreshness for live contract calls
  */
 function validateGraphQLResponseFreshness(data: any, responseTimeMs: number): boolean {
   // Response should take reasonable time (not cached)

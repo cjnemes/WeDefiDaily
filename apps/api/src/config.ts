@@ -57,14 +57,14 @@ const envSchema = z.object({
   PRICE_REFRESH_INTERVAL_MINUTES: z.coerce.number().int().positive().default(1),
 
   // Cache Configuration
-  ENABLE_MEMORY_CACHE: z.boolean().default(true),
+  ENABLE_MEMORY_CACHE: z.coerce.boolean().default(true),
   CACHE_TOKEN_METADATA_TTL_HOURS: z.coerce.number().positive().default(24),
   CACHE_BALANCE_TTL_MINUTES: z.coerce.number().positive().default(5),
   CACHE_PRICE_TTL_MINUTES: z.coerce.number().positive().default(1),
 
   // Monitoring & Alerting
   ALERT_CHANNEL_FILTER: z.string().optional(),
-  ENABLE_HEALTH_CHECKS: z.boolean().default(true),
+  ENABLE_HEALTH_CHECKS: z.coerce.boolean().default(true),
   HEALTH_CHECK_INTERVAL_SECONDS: z.coerce.number().positive().default(30),
   MONITORING_RETENTION_DAYS: z.coerce.number().positive().default(30),
 
@@ -80,14 +80,14 @@ const envSchema = z.object({
 
   // Security
   API_RATE_LIMIT_REQUESTS_PER_MINUTE: z.coerce.number().positive().default(100),
-  ENABLE_API_KEY_ROTATION: z.boolean().default(false),
+  ENABLE_API_KEY_ROTATION: z.coerce.boolean().default(false),
   API_KEY_ROTATION_DAYS: z.coerce.number().positive().default(30),
 
   // Feature Flags
-  ENABLE_FALLBACK_PROVIDERS: z.boolean().default(true),
-  ENABLE_BATCH_REQUESTS: z.boolean().default(true),
-  ENABLE_REQUEST_CACHING: z.boolean().default(true),
-  ENABLE_METRICS_COLLECTION: z.boolean().default(true),
+  ENABLE_FALLBACK_PROVIDERS: z.coerce.boolean().default(true),
+  ENABLE_BATCH_REQUESTS: z.coerce.boolean().default(true),
+  ENABLE_REQUEST_CACHING: z.coerce.boolean().default(true),
+  ENABLE_METRICS_COLLECTION: z.coerce.boolean().default(true),
 
   // Chain Configuration
   SUPPORTED_CHAIN_IDS: z.string().default('1,8453').transform(str =>
@@ -95,7 +95,12 @@ const envSchema = z.object({
   ),
 })
 .refine(data => {
-  // Validate that we have RPC URLs for supported chains
+  // Skip strict RPC URL validation in test environment
+  if (data.NODE_ENV === 'test') {
+    return true;
+  }
+
+  // Validate that we have RPC URLs for supported chains in non-test environments
   const missingUrls: string[] = [];
 
   if (data.SUPPORTED_CHAIN_IDS.includes(1) && !data.ALCHEMY_ETH_RPC_URL) {
