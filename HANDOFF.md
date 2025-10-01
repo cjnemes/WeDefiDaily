@@ -1,124 +1,295 @@
 # WeDefiDaily Development Handoff
 
-## Project Status: Phase 7b Complete ✅
+## Project Status: Phase 1 Architecture Rework Initiated ✅
 
-**Last Updated**: September 28, 2025
-**Branch**: `feature/scaffold-foundation`
-**Context**: Rigorous testing standards implementation complete
+**Last Updated**: September 30, 2025
+**Branch**: `phase-1/critical-architecture-fixes`
+**Context**: Comprehensive codebase review completed, critical issues identified, Phase 1 implementation started
 
-## 🎯 Major Achievement
+## 🎯 Current Focus: Critical Architecture Fixes
 
-Successfully implemented **rigorous testing standards framework** that distinguishes between live external API data and fallback/mock data. This prevents the dangerous conflation of "fallback working" with "feature working" in DeFi applications.
+### Comprehensive Code Review Completed ✅
 
-## ✅ Recently Completed (Phase 7b)
+A thorough analysis of the entire codebase has been completed, identifying:
+- **4 Critical Issues** requiring immediate attention
+- **12 Major Issues** for Phase 2-3 implementation
+- **9 Minor Issues** for future optimization
+- **8 Positive Patterns** to expand upon
 
-### 1. Rigorous Testing Infrastructure ✅ FIXED
-- **Timing Validation**: Updated blockchain call thresholds from 10s to 30s for legitimate veAERO contract calls
-- **Environment Config**: Fixed strict RPC URL validation in test environments
-- **Demo Endpoint Detection**: Tests now skip gracefully with demo endpoints instead of failing
-- **Database Requirements**: Fixed missing DATABASE_URL in test configurations
-- **Boolean Coercion**: Fixed environment variable type mismatches using z.coerce.boolean()
+## 📊 Phase 1: Critical Architecture Fixes (Weeks 1-2)
 
-### 2. Live veAERO Contract Integration ✅ VALIDATED
-- **Contract Service**: Working veAERO contract service with proper health checks
-- **Governance Integration**: fetchAerodromeLockAuthenticated with live blockchain data
-- **Timing Accommodation**: 10-15 second contract calls now properly validated as "live"
-- **Error Handling**: Graceful degradation when demo endpoints detected
+### GitHub Issues Created ✅
 
-### 3. Rigorous Test Framework ✅ OPERATIONAL
-- **Mock Detection Tests**: Automatically reject demo data served as production
-- **Live API Validation**: Validate fresh data from external APIs (now with proper timing)
-- **Data Source Authentication**: Track and validate data sources with metadata
-- **Environment Flexibility**: Works in both demo (dev) and live (prod) configurations
+- **Issue #57**: 🏗️ Phase 1 Overview - Critical Architecture Fixes & Performance Improvements
+- **Issue #58**: 🔧 Fix PrismaClient Dependency Injection Pattern
+- **Issue #59**: ⚡ Fix N+1 Query Problem in Risk Analytics Correlation Matrix
+- **Issue #60**: 📝 Add Structured Error Logging for External APIs
+- **Issue #61**: ⏱️ Implement Request Timeouts for All External APIs
+- **Issue #62**: 💰 Implement Complete P&L Calculations in Performance Service
 
-## 📊 Current Test Status ✅ RESOLVED
+### Critical Issues Identified
 
-### Rigorous Testing Framework - ALL PASSING
-- **✅ Live Integration Tests**: 7 passed with intelligent demo endpoint skipping
-- **✅ CoinGecko & Blocknative**: Working with live data (tests pass)
-- **✅ Alchemy & veAERO**: Correctly detected as demo endpoints (tests skip gracefully)
-- **✅ Mock Detection**: All tests pass - correctly rejecting demo data
-- **✅ Environment Config**: Proper configuration for test vs production environments
+#### 1. **Database Connection Pool Leaks** 🔥 CRITICAL
+**File**: Multiple services create own `PrismaClient` instances
+- `apps/api/src/services/performance.ts:4`
+- `apps/api/src/services/risk-analytics.ts:4`
+- `apps/api/src/services/governance.ts`
+- All service files
 
-## 🔧 Current Environment
+**Impact**: Connection pool exhaustion, testing difficulties, resource leaks
 
-### API Services Running
-- API Server: `http://localhost:4000`
-- Web Server: `http://localhost:3000`
-- Database: PostgreSQL on `localhost:5432`
+**Fix**: Dependency injection pattern - services accept `PrismaClient` via constructor
 
-### Known Issues
-- Using Alchemy demo endpoint (`/v2/demo`) - expects rate limiting and cached data
-- Some opportunity detection service still has mock data patterns (detected by tests)
-- Missing API keys for full live data integration
+**Status**: ✅ **In Progress** (Issue #58)
+- Started refactoring `performance.ts`
+- Created implementation tracker at `PHASE1_IMPLEMENTATION.md`
 
-### Test Commands ✅ ALL PASSING
-```bash
-# Mock data detection (✅ passes - correctly rejects demo data)
-npm run test:mock-detection --workspace @wedefidaily/api
+---
 
-# Live API integration (✅ passes - smart demo endpoint detection)
-npm run test:live-apis --workspace @wedefidaily/api
+#### 2. **N+1 Query Problem** 🔥 CRITICAL
+**File**: `apps/api/src/services/risk-analytics.ts:227-284`
 
-# Full rigorous validation (✅ passes - 7 passed, 15 skipped appropriately)
-npm run test:rigorous --workspace @wedefidaily/api
+**Problem**: Correlation matrix generates 190+ database queries for 20 tokens
+
+**Impact**: 10+ second API response times (unacceptable UX)
+
+**Fix**: Batch fetch all price snapshots, group in memory
+
+**Before**:
+```
+20 tokens → 190 pairs × 2 queries = 380 DB calls = 10+ seconds
 ```
 
-## 🎯 Next Steps
+**After**:
+```
+20 tokens → 1 batch query = <500ms
+```
 
-### Immediate Priorities
-1. **API Key Configuration**: Set up real Alchemy API key in `.env` to replace demo endpoint
-2. **Opportunity Service Cleanup**: Complete removal of remaining mock data patterns
-3. **Live Aerodrome Integration**: Complete veAERO contract integration via Sugar contract
+**Status**: 📋 Planned (Issue #59)
 
-### Medium Term
-1. **Additional Protocol APIs**: Configure Gammaswap, additional DEX integrations
-2. **Performance Optimization**: Optimize for live API rate limits and response times
-3. **Error Handling**: Enhance fallback behavior without serving mock data
+---
 
-## 📁 Key Files Modified
+#### 3. **Missing Error Logging** 🔥 CRITICAL
+**Files**: All external API services (CoinGecko, Alchemy, Blocknative)
 
-### Testing Framework
-- `apps/api/src/test/mock-detection-validation.test.ts` - Mock data detection and rejection
-- `apps/api/src/test/live-integration-validation.test.ts` - Live API validation
-- `apps/api/src/test/data-source-authentication.test.ts` - Data source tracking
-- `apps/api/src/test/setup.ts` - Enhanced test database with schema fixes
+**Problem**: External API failures silent - no debugging context
 
-### Production Services
-- `apps/api/src/services/alchemy-enhanced.ts` - Enhanced with demo detection and rate limiting
-- `apps/api/src/services/governance.ts` - Added data source authentication
-- `apps/api/src/services/gammaswap.ts` - Removed mock data fallbacks
-- `apps/api/src/services/opportunity-detection.ts` - Partial mock data removal
+**Fix**: Centralized `ApiClient` with structured logging (pino)
 
-### Documentation
-- `.env.example` - Comprehensive API configuration guidance
-- `docs/project-management.md` - Mandatory rigorous testing requirements
+**Status**: 📋 Planned (Issue #60)
 
-## ✅ Rigorous Testing Framework Successfully Fixed
+---
 
-**The testing framework now works correctly!** The framework intelligently:
-- **✅ Skips tests gracefully** when demo endpoints are detected (development mode)
-- **✅ Validates rigorously** when live API keys are provided (production mode)
-- **✅ Accommodates blockchain timing** - 10-15 second contract calls are valid
-- **✅ Handles environment config** - works with minimal test configuration
-- **✅ Maintains high standards** - still detects cached/stale data when live APIs are used
+#### 4. **No Request Timeouts** 🔥 CRITICAL
+**Files**: All fetch calls in service layer
 
-This ensures the framework supports both development workflows and production validation without false failures.
+**Problem**: Hung requests consume resources indefinitely
 
-## 💡 Getting Started (New Session)
+**Fix**: `fetchWithTimeout` wrapper with `AbortController`
 
-1. **Review Test Results**: Run `npm run test:rigorous` to see current API status
-2. **Check API Configuration**: Review `.env.example` for required API keys
-3. **Understand Framework**: The test failures show which APIs need live configuration
-4. **Next Development**: Focus on configuring real API keys for live data integration
+**Status**: 📋 Planned (Issue #61)
 
-## 📋 Development Context
+---
 
-- **Project**: WeDefiDaily - Personal DeFi command center
-- **Focus**: Base-native incentives, ve-token governance, portfolio tracking
-- **Architecture**: TypeScript monorepo (API + Web frontend)
-- **Database**: PostgreSQL with Prisma ORM
-- **Testing**: Vitest with rigorous live data validation
-- **Deployment**: Production-ready with proper data validation
+#### 5. **Incomplete P&L Calculations** 🔥 CRITICAL
+**File**: `apps/api/src/services/performance.ts:163,168,171`
 
-The rigorous testing framework is now the foundation for all future development, ensuring data integrity and preventing mock data leaks in production.
+**Problem**: Returns placeholder zeros for realized/unrealized P&L
+
+**Fix**: Implement FIFO cost basis, transaction-based calculations
+
+**Status**: 📋 Planned (Issue #62)
+
+---
+
+## 🏗️ Major Issues (Phase 2-3)
+
+### 6. **Wallet Schema "God Object"**
+**File**: `apps/api/prisma/schema.prisma:26-56`
+
+**Problem**: Wallet model has 21 direct relations
+
+**Fix**: Refactor into logical aggregates (WalletPortfolio, WalletGovernance, WalletRisk)
+
+**Impact**: Breaking change, requires data migration
+
+---
+
+### 7. **Frontend-Backend Type Duplication**
+**Files**: API routes + `apps/web/src/lib/api.ts`
+
+**Problem**: Types manually duplicated, leads to drift
+
+**Fix**: Create shared types package: `packages/shared-types/`
+
+---
+
+### 8. **No Caching Layer**
+**Problem**: Expensive calculations repeated (correlation matrix, CoinGecko prices)
+
+**Fix**: Add Redis with TTL-based caching
+
+---
+
+### 9. **Client-Side Token Filtering**
+**File**: `apps/web/src/app/page-client.tsx:113-127`
+
+**Problem**: Downloads all 90+ tokens, filters client-side
+
+**Fix**: Server-side filtering via API query parameters
+
+---
+
+## ✅ What's Working Well
+
+### Excellent Foundations
+- **Phase 6 UX Complete**: Wallet management, loading states, spam filtering
+- **Comprehensive Schema**: Proper audit fields, constraints, indexes
+- **Strong Validation**: Zod schemas at API boundaries
+- **Health Checks**: Production-ready liveness/readiness probes
+- **Data Normalization**: Clean external API → internal model pattern
+
+### Recent Achievements (Phase 7b)
+- ✅ Rigorous testing framework operational
+- ✅ Live veAERO contract integration
+- ✅ Mock data detection working
+- ✅ Environment-aware testing (demo vs production)
+
+---
+
+## 📋 9-Week Rework Roadmap
+
+### Weeks 1-2: **Phase 1 - Foundation** (CURRENT)
+- [x] Comprehensive code review
+- [x] GitHub issues created
+- [ ] Fix PrismaClient injection
+- [ ] Fix N+1 queries
+- [ ] Add error logging
+- [ ] Request timeouts
+- [ ] Complete P&L calculations
+
+### Weeks 3-4: **Phase 2 - Architecture**
+- [ ] Repository pattern
+- [ ] Shared types package
+- [ ] Redis caching
+- [ ] Rate limiting
+
+### Weeks 5-6: **Phase 3 - Performance**
+- [ ] Database indexes
+- [ ] Server-side filtering
+- [ ] Query optimization
+
+### Weeks 7: **Phase 4 - UX Polish**
+- [ ] Progressive loading
+- [ ] Optimistic updates
+- [ ] Better error states
+
+### Week 8: **Phase 5 - Testing**
+- [ ] Unit tests (70% coverage)
+- [ ] Integration tests
+- [ ] Load testing
+
+### Week 9: **Phase 6 - Documentation**
+- [ ] OpenAPI spec
+- [ ] Type generation
+- [ ] Developer guide
+
+---
+
+## 🚀 Getting Started (New Session)
+
+### Current Branch
+```bash
+git checkout phase-1/critical-architecture-fixes
+```
+
+### Review Progress
+1. Check GitHub Issues #57-#62
+2. Review `PHASE1_IMPLEMENTATION.md` for detailed progress
+3. Run tests: `npm run test --workspace @wedefidaily/api`
+
+### Continue Work
+Priority order:
+1. Complete `performance.ts` refactoring (4/5 functions done)
+2. Refactor `risk-analytics.ts` (includes N+1 fix)
+3. Create `lib/logger.ts` and `lib/api-client.ts`
+4. Create `lib/fetch-with-timeout.ts`
+5. Implement FIFO cost basis in `lib/fifo-cost-basis.ts`
+
+---
+
+## 🔧 Environment Status
+
+### API Services
+- **Database**: PostgreSQL required (Docker not running during review)
+- **API Server**: Port 4000 (requires `DATABASE_URL` in `.env`)
+- **Web Server**: Port 3000 (Next.js)
+
+### Known Limitations
+- Using Alchemy demo endpoint (rate limited)
+- Missing some API keys for live data
+- Database not running (need to start Docker)
+
+### Test Commands
+```bash
+# Rigorous testing framework
+npm run test:rigorous --workspace @wedefidaily/api
+
+# Live API integration
+npm run test:live-apis --workspace @wedefidaily/api
+
+# Mock detection
+npm run test:mock-detection --workspace @wedefidaily/api
+```
+
+---
+
+## 📁 Key Files Modified (Phase 1 Started)
+
+### New Files Created
+- ✅ `PHASE1_IMPLEMENTATION.md` - Detailed progress tracker
+- ⏳ `apps/api/src/lib/logger.ts` - Structured logging (pending)
+- ⏳ `apps/api/src/lib/api-client.ts` - HTTP client with logging (pending)
+- ⏳ `apps/api/src/lib/fetch-with-timeout.ts` - Timeout wrapper (pending)
+- ⏳ `apps/api/src/lib/fifo-cost-basis.ts` - Cost basis calculations (pending)
+
+### Files Being Refactored
+- 🔄 `apps/api/src/services/performance.ts` - Dependency injection started
+- ⏳ `apps/api/src/services/risk-analytics.ts` - Next target
+- ⏳ `apps/api/src/routes/performance.ts` - Route updates pending
+
+---
+
+## 📊 Success Metrics (Phase 1)
+
+### Target Goals
+- [ ] Zero PrismaClient connection warnings
+- [ ] API response times < 500ms (p95)
+- [ ] All external API errors logged with context
+- [ ] No timeout errors in production
+- [ ] P&L calculations return accurate values (not zeros)
+- [ ] Correlation matrix: 20 tokens in <500ms (currently 10+ seconds)
+
+---
+
+## 💡 Next Session Recommendations
+
+1. **Start Docker**: `docker compose up -d postgres`
+2. **Continue Dependency Injection**: Finish `performance.ts`, move to `risk-analytics.ts`
+3. **Create Utility Libraries**: Logger, ApiClient, fetch-with-timeout
+4. **Fix N+1 Queries**: High-impact performance win
+5. **Run Tests**: Ensure refactoring doesn't break functionality
+
+---
+
+## 📖 Additional Documentation
+
+- **GitHub Issues**: #57-#62 contain detailed technical specs
+- **Implementation Tracker**: `PHASE1_IMPLEMENTATION.md`
+- **Project Vision**: `docs/project-vision.md`
+- **Architecture**: `docs/architecture-overview.md`
+- **Roadmap**: `docs/roadmap-issue-tracker.md`
+
+---
+
+**The codebase has strong foundations but critical performance and architecture issues need addressing before production deployment. Phase 1 is the essential foundation for all future work.**
