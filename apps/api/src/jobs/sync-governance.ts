@@ -5,6 +5,7 @@ import { env } from '../config';
 import {
   fetchAerodromeBribes,
   fetchAerodromeLock,
+  fetchMoonwellLock,
   fetchThenaBribes,
   fetchThenaLockEnhanced,
   NormalizedBribe,
@@ -14,13 +15,15 @@ import {
 const prisma = new PrismaClient();
 
 interface GovernanceProtocolConfig {
-  slug: 'aerodrome' | 'thena';
+  slug: 'aerodrome' | 'thena' | 'moonwell';
   name: string;
   chainId: number;
   apiUrl?: string | null;
+  rpcUrl?: string | null;
   bscRpcUrl?: string | null;
   lockFetcher?: (apiUrl: string, address: string) => Promise<NormalizedLock | null>;
   enhancedLockFetcher?: (apiUrl: string, bscRpcUrl: string | undefined, address: string) => Promise<NormalizedLock | null>;
+  rpcLockFetcher?: (rpcUrl: string, address: string) => Promise<NormalizedLock | null>;
   bribeFetcher?: (apiUrl: string) => Promise<NormalizedBribe[]>;
 }
 
@@ -41,6 +44,14 @@ const GOVERNANCE_PROTOCOLS: GovernanceProtocolConfig[] = [
     bscRpcUrl: env.ALCHEMY_BSC_RPC_URL || env.BSC_RPC_URL,
     enhancedLockFetcher: fetchThenaLockEnhanced, // Uses on-chain BSC integration
     bribeFetcher: fetchThenaBribes, // Uses subgraph integration
+  },
+  {
+    slug: 'moonwell',
+    name: 'Moonwell',
+    chainId: 8453,
+    rpcUrl: env.ALCHEMY_BASE_RPC_URL,
+    rpcLockFetcher: env.ALCHEMY_BASE_RPC_URL ? fetchMoonwellLock : undefined,
+    // No bribes for Moonwell - rewards come from Reserve Auctions
   },
 ];
 
@@ -235,7 +246,7 @@ async function syncProtocol(config: GovernanceProtocolConfig) {
   const protocol = await ensureProtocol(config);
 
   // Handle different types of lock fetchers
-  const hasLockFetching = config.lockFetcher || config.enhancedLockFetcher;
+  const hasLockFetching = config.lockFetcher || config.enhancedLockFetcher || config.rpcLockFetcher;
 
   if (!hasLockFetching) {
     console.warn(`Skipping ${config.slug} governance lock sync: No lock fetcher configured`);
@@ -251,8 +262,12 @@ async function syncProtocol(config: GovernanceProtocolConfig) {
         try {
           let lock: NormalizedLock | null = null;
 
+          // Use RPC fetcher if available (for Moonwell with direct contract calls)
+          if (config.rpcLockFetcher && config.rpcUrl) {
+            lock = await config.rpcLockFetcher(config.rpcUrl, wallet.address);
+          }
           // Use enhanced fetcher if available (for Thena with on-chain integration)
-          if (config.enhancedLockFetcher && config.bscRpcUrl) {
+          else if (config.enhancedLockFetcher && config.bscRpcUrl) {
             lock = await config.enhancedLockFetcher(
               config.apiUrl || '',
               config.bscRpcUrl,
