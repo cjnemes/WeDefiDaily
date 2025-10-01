@@ -587,6 +587,49 @@ export async function fetchAerodromeBribes(apiUrl: string): Promise<NormalizedBr
   return results;
 }
 
+/**
+ * Fetch Moonwell stkWELL balance for a wallet
+ * Moonwell uses a simple staking model: 1 stkWELL = 1 voting power (no decay)
+ */
+export async function fetchMoonwellLock(rpcUrl: string, walletAddress: string): Promise<NormalizedLock | null> {
+  try {
+    const { ethers } = await import('ethers');
+    const provider = new ethers.JsonRpcProvider(rpcUrl);
+
+    // stkWELL contract address on Base
+    const stkWellAddress = '0xe66E3A37C3274Ac24FE8590f7D84A2427194DC17';
+
+    // ERC-20 ABI for balanceOf
+    const erc20Abi = [
+      'function balanceOf(address account) view returns (uint256)',
+    ];
+
+    const stkWellContract = new ethers.Contract(stkWellAddress, erc20Abi, provider);
+    const balance = await stkWellContract.balanceOf(walletAddress);
+
+    // Convert from Wei to human-readable (18 decimals)
+    const balanceDecimal = new Decimal(balance.toString()).div(new Decimal(10).pow(18));
+
+    // No balance = no lock
+    if (balanceDecimal.isZero()) {
+      return null;
+    }
+
+    // Moonwell staking is simple: 1 stkWELL = 1 voting power (no time decay)
+    return {
+      address: walletAddress,
+      lockAmount: balanceDecimal,
+      votingPower: balanceDecimal, // 1:1 ratio
+      boostMultiplier: new Decimal(1), // No boost in Moonwell
+      lockEndsAt: undefined, // No lock expiration - staking is perpetual
+      protocolSlug: 'moonwell',
+    };
+  } catch (error) {
+    console.error(`Failed to fetch Moonwell lock for ${walletAddress}:`, error);
+    throw error;
+  }
+}
+
 export async function fetchThenaBribes(apiUrl: string): Promise<NormalizedBribe[]> {
   const payload = await safeFetchJson(`${apiUrl.replace(/\/$/, '')}/bribes`);
   if (!payload) {
