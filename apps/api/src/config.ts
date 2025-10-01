@@ -1,4 +1,30 @@
 import { z } from 'zod';
+import { config as loadDotenv } from 'dotenv';
+import { resolve, join } from 'path';
+import { existsSync } from 'fs';
+
+// Load .env file from project root
+// Try multiple paths to ensure we find the .env file regardless of execution context
+const possibleEnvPaths = [
+  resolve(process.cwd(), '.env'),                    // From monorepo root
+  resolve(__dirname, '../../../.env'),               // From compiled dist/
+  resolve(__dirname, '../../.env'),                  // From src/
+  join(process.cwd(), '.env'),                       // Alternative cwd
+];
+
+let envLoaded = false;
+for (const envPath of possibleEnvPaths) {
+  if (existsSync(envPath)) {
+    loadDotenv({ path: envPath });
+    envLoaded = true;
+    console.log(`[config] Loaded environment from: ${envPath}`);
+    break;
+  }
+}
+
+if (!envLoaded) {
+  console.warn('[config] Warning: .env file not found in any expected location');
+}
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
