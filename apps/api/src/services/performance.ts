@@ -1,8 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import Decimal from 'decimal.js';
 
-const prisma = new PrismaClient();
-
 export interface PerformanceData {
   totalReturn: Decimal;
   totalReturnPercent: Decimal;
@@ -35,6 +33,7 @@ export interface PriceChange {
  * Calculate portfolio performance metrics for a given timeframe
  */
 export async function calculatePerformanceMetrics(
+  prisma: PrismaClient,
   walletId: string | null,
   timeframe: '24h' | '7d' | '30d' | '90d' | '1y' | 'all'
 ): Promise<PerformanceData> {
