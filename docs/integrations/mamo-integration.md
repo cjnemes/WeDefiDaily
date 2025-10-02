@@ -1,8 +1,13 @@
 # MAMO.BOT Integration
 
+## ⚠️ Status: Partial Integration
+
+**Current Status:** Registry lookup working, balance detection incomplete
+**Reason:** MAMO's personalized vault architecture requires additional contract interface discovery
+
 ## Overview
 
-MAMO.BOT is an AI-powered DeFi yield optimization platform on Base that offers automated strategy management and revenue sharing. WeDefiDaily integrates with MAMO's staking system to track deposited MAMO tokens in the MAMO Account (staking vault).
+MAMO.BOT is an AI-powered DeFi yield optimization platform on Base that offers automated strategy management and revenue sharing. This integration aims to track deposited MAMO tokens in the MAMO Account (staking vault).
 
 ## Protocol Information
 
@@ -249,10 +254,32 @@ npm run sync:governance
 - No epoch-based snapshots
 
 ### Known Limitations
-- Only tracks MAMO staking (not USDC or cbBTC accounts)
+
+**Critical:**
+- ❌ **Balance detection incomplete** - Cannot currently read MAMO positions from vault contracts
+- ❌ **Vault interface unknown** - Personalized vaults don't expose standard ERC-20 or ERC-4626 interfaces
+- ⚠️ **Registry lookup works** - Can find user's vault contracts via MamoStrategyRegistry
+- ⚠️ **Asset type unknown** - Cannot determine which vaults hold MAMO vs USDC/cbBTC
+
+**Minor:**
+- Only attempts to track MAMO staking (not USDC or cbBTC accounts)
 - Does not monitor pending rewards
 - Auto-compounding status not tracked
 - Multiple strategies aggregated (no per-strategy breakdown)
+
+### Required Fixes
+
+**Priority 1 - Critical:**
+1. **Discover vault contract interface** - Need actual ABI for user vault contracts
+2. **Implement balance queries** - Find correct function to query user's deposited amount
+3. **Asset type detection** - Identify which vaults hold MAMO vs other assets
+4. **Test with real positions** - Verify detection works with actual staked MAMO
+
+**Possible Solutions:**
+- Contact MAMO team for contract documentation/ABI
+- Reverse engineer deployed vault contracts on BaseScan
+- Check if MAMO provides API for querying user positions
+- Analyze MAMO.BOT frontend to see how they query balances
 
 ### Future Enhancements
 - Track all account types (USDC, cbBTC, MAMO)

@@ -41,28 +41,40 @@ async function testMamoIntegration() {
     console.log(`  [${i}] ${addr}`);
   });
 
-  // Step 2: Check MAMO balance in each strategy
-  console.log('\nStep 2: Checking MAMO token balances...');
-  const erc20Abi = [
+  // Step 2: Check vault share balances (user owns vault shares, not direct tokens)
+  console.log('\nStep 2: Checking vault shares owned by user...');
+  const vaultAbi = [
     'function balanceOf(address account) view returns (uint256)',
     'function asset() view returns (address)',
+    'function totalAssets() view returns (uint256)',
+    'function convertToAssets(uint256 shares) view returns (uint256)',
   ];
-  const mamoToken = new ethers.Contract(MAMO_TOKEN, erc20Abi, provider);
 
-  let totalStaked = new Decimal(0);
+  let totalMamoStaked = new Decimal(0);
 
   for (let i = 0; i < userStrategies.length; i++) {
     const strategyAddress = userStrategies[i];
-    const balance = await mamoToken.balanceOf(strategyAddress);
-    const balanceDecimal = new Decimal(balance.toString()).div(new Decimal(10).pow(18));
 
-    // Try to identify strategy type
-    const strategy = new ethers.Contract(strategyAddress, erc20Abi, provider);
+    // The strategy contract is an ERC-4626 vault
+    // User's wallet owns SHARES of this vault
+    const vault = new ethers.Contract(strategyAddress, vaultAbi, provider);
+
+    // Check how many vault shares the user owns
+    const userShares = await vault.balanceOf(TEST_WALLET);
+    const userSharesDecimal = new Decimal(userShares.toString()).div(new Decimal(10).pow(18));
+
     let assetAddress = 'unknown';
+    let userAssetValue = new Decimal(0);
+
     try {
-      assetAddress = await strategy.asset();
+      // Get the underlying asset this vault holds
+      assetAddress = await vault.asset();
+
+      // Convert user's shares to underlying asset amount
+      const assetAmount = await vault.convertToAssets(userShares);
+      userAssetValue = new Decimal(assetAmount.toString()).div(new Decimal(10).pow(18));
     } catch (e) {
-      // Strategy might not have asset() function
+      console.error(`    Error querying vault ${i}:`, e.message);
     }
 
     const assetType =
@@ -71,17 +83,29 @@ async function testMamoIntegration() {
       assetAddress.toLowerCase() === '0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf' ? 'cbBTC Account' :
       'Unknown';
 
-    console.log(`  Strategy ${i} (${assetType}): ${balanceDecimal.toString()} MAMO`);
-    totalStaked = totalStaked.plus(balanceDecimal);
+    console.log(`  Strategy ${i} (${assetType}):`);
+    console.log(`    Vault Address: ${strategyAddress}`);
+    console.log(`    Asset Address: ${assetAddress}`);
+    console.log(`    User Vault Shares: ${userSharesDecimal.toString()}`);
+    console.log(`    User Asset Value: ${userAssetValue.toString()}`);
+
+    // For MAMO Account vaults, count the user's asset value as staked MAMO
+    if (assetType === 'MAMO Account' && !userAssetValue.isZero()) {
+      totalMamoStaked = totalMamoStaked.plus(userAssetValue);
+      console.log(`    ✓ Counted as MAMO staking: ${userAssetValue.toString()}`);
+    }
+
+    console.log('');
   }
 
   // Step 3: Results
-  console.log('\n📊 Results:');
-  console.log(`Total MAMO Staked: ${totalStaked.toString()}`);
-  console.log(`Voting Power: ${totalStaked.toString()} (1:1 ratio)`);
+  console.log('📊 Results:');
+  console.log(`Total MAMO Staked: ${totalMamoStaked.toString()}`);
+  console.log(`Voting Power: ${totalMamoStaked.toString()} (1:1 ratio)`);
 
-  if (totalStaked.isZero()) {
-    console.log('⚠️  Warning: Strategies exist but no MAMO balance detected');
+  if (totalMamoStaked.isZero()) {
+    console.log('⚠️  No MAMO staking detected');
+    console.log('    (USDC/cbBTC accounts exist but no MAMO Account with deposits)');
   } else {
     console.log('✅ MAMO staking integration working correctly!');
   }
