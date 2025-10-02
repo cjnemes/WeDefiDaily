@@ -630,6 +630,61 @@ export async function fetchMoonwellLock(rpcUrl: string, walletAddress: string): 
   }
 }
 
+/**
+ * Fetch MAMO staking balance for a wallet
+ * MAMO uses personalized strategy contracts - need to query registry first
+ */
+export async function fetchMamoStakingLock(rpcUrl: string, walletAddress: string): Promise<NormalizedLock | null> {
+  try {
+    const { ethers } = await import('ethers');
+    const provider = new ethers.JsonRpcProvider(rpcUrl);
+
+    // Step 1: Query MamoStrategyRegistry for user's strategy contracts
+    const registryAddress = '0x46a5624C2ba92c08aBA4B206297052EDf14baa92';
+    const registryAbi = [
+      'function getUserStrategies(address user) external view returns (address[])',
+    ];
+
+    const registry = new ethers.Contract(registryAddress, registryAbi, provider);
+    const userStrategies: string[] = await registry.getUserStrategies(walletAddress);
+
+    if (userStrategies.length === 0) {
+      return null;
+    }
+
+    // Step 2: Query each strategy for MAMO token balance
+    const mamoTokenAddress = '0x7300B37DfdfAb110d83290A29DfB31B1740219fE';
+    const erc20Abi = ['function balanceOf(address account) view returns (uint256)'];
+    const mamoToken = new ethers.Contract(mamoTokenAddress, erc20Abi, provider);
+
+    let totalStaked = new Decimal(0);
+
+    // Check MAMO balance in each strategy contract
+    for (const strategyAddress of userStrategies) {
+      const balance = await mamoToken.balanceOf(strategyAddress);
+      const balanceDecimal = new Decimal(balance.toString()).div(new Decimal(10).pow(18));
+      totalStaked = totalStaked.plus(balanceDecimal);
+    }
+
+    if (totalStaked.isZero()) {
+      return null;
+    }
+
+    // MAMO staking is simple: 1 MAMO = 1 voting power (no time decay)
+    return {
+      address: walletAddress,
+      lockAmount: totalStaked,
+      votingPower: totalStaked, // 1:1 ratio
+      boostMultiplier: new Decimal(1), // No boost in MAMO
+      lockEndsAt: undefined, // No lock expiration - staking is flexible
+      protocolSlug: 'mamo',
+    };
+  } catch (error) {
+    console.error(`Failed to fetch MAMO staking lock for ${walletAddress}:`, error);
+    throw error;
+  }
+}
+
 export async function fetchThenaBribes(apiUrl: string): Promise<NormalizedBribe[]> {
   const payload = await safeFetchJson(`${apiUrl.replace(/\/$/, '')}/bribes`);
   if (!payload) {

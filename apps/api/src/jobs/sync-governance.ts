@@ -5,6 +5,7 @@ import { env } from '../config';
 import {
   fetchAerodromeBribes,
   fetchAerodromeLock,
+  fetchMamoStakingLock,
   fetchMoonwellLock,
   fetchThenaBribes,
   fetchThenaLockEnhanced,
@@ -15,7 +16,7 @@ import {
 const prisma = new PrismaClient();
 
 interface GovernanceProtocolConfig {
-  slug: 'aerodrome' | 'thena' | 'moonwell';
+  slug: 'aerodrome' | 'thena' | 'moonwell' | 'mamo';
   name: string;
   chainId: number;
   apiUrl?: string | null;
@@ -52,6 +53,14 @@ const GOVERNANCE_PROTOCOLS: GovernanceProtocolConfig[] = [
     rpcUrl: env.ALCHEMY_BASE_RPC_URL,
     rpcLockFetcher: env.ALCHEMY_BASE_RPC_URL ? fetchMoonwellLock : undefined,
     // No bribes for Moonwell - rewards come from Reserve Auctions
+  },
+  {
+    slug: 'mamo',
+    name: 'MAMO',
+    chainId: 8453,
+    rpcUrl: env.ALCHEMY_BASE_RPC_URL,
+    rpcLockFetcher: env.ALCHEMY_BASE_RPC_URL ? fetchMamoStakingLock : undefined,
+    // No bribes for MAMO - rewards come from revenue sharing
   },
 ];
 
